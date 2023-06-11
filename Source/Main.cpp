@@ -9,6 +9,7 @@
 #include "Include/common.h"
 #include "Include/color.h"
 #include "Include/hittableList.h"
+#include "Include/material.h"
 #include "Include/sphere.h"
 
 color RayColor(const ray& r, const hittable& world, int depth)
@@ -22,8 +23,11 @@ color RayColor(const ray& r, const hittable& world, int depth)
 	hitRecord rec;
 	if(world.hit(r, 0.001, infinity, rec))
 	{
-		point3 target = rec.p + rec.normal + randomInUnitSphere();
-		return 0.5 * RayColor(ray(rec.p, target - rec.p), world, depth - 1);
+		ray scattered;
+		color attenuation;
+		if (rec.mat_ptr->scatter(r, rec, attenuation, scattered))
+			return attenuation * RayColor(scattered, world, depth - 1);
+		return color(0, 0, 0);
 	}
 	const vec3 unitDirection = unit(r.direction());
 	auto t = 0.5 * (unitDirection.y() + 1.0);
@@ -35,15 +39,23 @@ int main(int argc, char* argv[])
 {
 	auto start = std::chrono::steady_clock::now();
 	//image
-	constexpr int imageWidth = 1920;
+	constexpr int imageWidth = 400;
 	constexpr int imageHeight = static_cast<int>(imageWidth / aspectRatio);
 	constexpr int samplesPerPixel = 200;
 	constexpr int maxDepth = 50;
 
 	//world
 	hittableList world;
-	world.add(std::make_shared<sphere>(point3(0, 0, -1), 0.5));
-	world.add(std::make_shared<sphere>(point3(0, -100.5, -1), 100));
+    auto material_ground = std::make_shared<lambertian>(color(0.8, 0.8, 0.0));
+    auto material_center = std::make_shared<lambertian>(color(0.8, 0.3, 1.0));
+    auto material_left   = std::make_shared<dielectric>(1.5);
+    auto material_right  = std::make_shared<metal>(color(0.8, 0.6, 0.2), 1.0);
+
+    world.add(std::make_shared<sphere>(point3( 0.0, -100.5, -1.0), 100.0, material_ground));
+    world.add(std::make_shared<sphere>(point3( 0.0,    0.0, -1.0),   0.5, material_center));
+    world.add(std::make_shared<sphere>(point3(-1.0,    0.0, -1.0),   0.5, material_left));
+    world.add(std::make_shared<sphere>(point3(-1.0,    0.0, -1.0),   -0.4, material_left));
+    world.add(std::make_shared<sphere>(point3( 1.0,    0.0, -1.0),   0.5, material_right));
 
 	//camera
 	camera cam;
@@ -95,7 +107,7 @@ int main(int argc, char* argv[])
 	for (int j = imageHeight - 1; j >= 0; j--)
 	{
 		std::cerr << "\r" << static_cast<int>((static_cast<double>(imageHeight - j) / imageHeight) * 100.0) << "% of file write is completed         " << std::flush;
-		for (int i = imageWidth - 1; i >= 0; i--)
+		for (int i = 0; i < imageWidth; i++)
 		{
 			write_color(image, img[j][i], samplesPerPixel);
 		}

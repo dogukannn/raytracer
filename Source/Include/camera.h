@@ -18,7 +18,7 @@ struct camera
 		origin = point3(0, 0, 0);
 		horizontal = vec3(viewportWidth, 0, 0);
 		vertical = vec3(0, viewportHeight, 0);
-		lowerLeftCorner = origin - horizontal / 2.0 - vertical / 2.0 - vec3(0, 0, focalLength);
+		lowerLeftCorner = origin - (horizontal / 2.0) - (vertical / 2.0) - vec3(0, 0, focalLength);
 	}
 
 	ray getRay(double u, double v) const

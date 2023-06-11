@@ -8,9 +8,10 @@ struct sphere : public hittable
 {
 	point3 center;
 	double radius;
+	std::shared_ptr<material> mat_ptr;
 
 	sphere() = default;
-	sphere(const point3& cen, const double r) : center(cen), radius(r) {}
+	sphere(const point3& cen, const double r, std::shared_ptr<material> m) : center(cen), radius(r), mat_ptr(m) {}
 
 	bool hit(const ray& r, double tMin, double tMax, hitRecord& rec) const override;
 };
@@ -38,6 +39,7 @@ inline bool sphere::hit(const ray& r, double tMin, double tMax, hitRecord& rec) 
 	rec.p = r.at(rec.t);
 	vec3 outwardNormal = (rec.p - center) / radius;
 	rec.setFaceNormal(r, outwardNormal);
+	rec.mat_ptr = mat_ptr;
 
 	return true;
 }
