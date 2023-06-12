@@ -141,6 +141,16 @@ vec3 randomUnitVector()
 	return unit(randomInUnitSphere());
 }
 
+vec3 randomInUnitDisk()
+{
+	while (true)
+	{
+		auto p = vec3(randomDouble(-1, 1), randomDouble(-1, 1), 0);
+		if(p.lengthSquared() >= 1) continue;
+		return p;
+	}
+}
+
 vec3 reflect(const vec3 &v, const vec3 &n)
 {
 	return v - 2 * dot(v, n) * n;

@@ -8,21 +8,39 @@ struct camera
 	point3 lowerLeftCorner;
 	vec3 horizontal;
 	vec3 vertical;
+	vec3 u, v, w;
+	double lensRadius;
 
-	camera()
+	camera(point3 lookfrom,
+	       point3 lookat,
+	       vec3 vup,
+	       double vfov, 
+	       double aspectRatio,
+	       double aperture,
+	       double focusDist)
 	{
-		constexpr double viewportHeight = 2.0;
-		constexpr double viewportWidth = aspectRatio * viewportHeight;
-		constexpr double focalLength = 1.0;
+		auto theta = degreesToRadians(vfov);
+		auto h = tan(theta / 2);
+		double viewportHeight = 2.0 * h;
+		double viewportWidth = aspectRatio * viewportHeight;
 
-		origin = point3(0, 0, 0);
-		horizontal = vec3(viewportWidth, 0, 0);
-		vertical = vec3(0, viewportHeight, 0);
-		lowerLeftCorner = origin - (horizontal / 2.0) - (vertical / 2.0) - vec3(0, 0, focalLength);
+		w = unit(lookfrom - lookat);
+		u = unit(cross(vup, w));
+		v = cross(w, u);
+
+		origin = lookfrom;
+		horizontal = focusDist * viewportWidth * u;
+		vertical = focusDist *  viewportHeight * v;
+		lowerLeftCorner = origin - (horizontal / 2.0) - (vertical / 2.0) - focusDist * w;
+
+		lensRadius = aperture / 2;
 	}
 
-	ray getRay(double u, double v) const
+	ray getRay(double s, double t) const
 	{
-		return ray(origin, lowerLeftCorner + u * horizontal + v * vertical - origin);
+		vec3 rd = lensRadius * randomInUnitSphere();
+		vec3 offset = u * rd.x() + v * rd.y();
+
+		return ray(origin + offset,  lowerLeftCorner + s * horizontal + t * vertical - origin - offset);
 	}
 };

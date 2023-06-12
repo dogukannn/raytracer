@@ -4,7 +4,7 @@
 #include <limits>
 #include <memory>
 
-constexpr double aspectRatio = 16.0 / 9.0;
+constexpr double aspectRatio = 3.0 / 2.0;
 
 const double infinity = std::numeric_limits<double>::infinity();
 const double pi = 3.1415926535897932385;
