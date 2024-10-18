@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.h"
+#include "parser.h"
 
 struct camera
 {
@@ -14,23 +15,27 @@ struct camera
 	camera(point3 lookfrom,
 	       point3 lookat,
 	       vec3 vup,
-	       double vfov, 
+	       parser::Vec4f near_plane, 
 	       double aspectRatio,
 	       double aperture,
 	       double focusDist)
 	{
-		auto theta = degreesToRadians(vfov);
-		auto h = tan(theta / 2);
-		double viewportHeight = 2.0 * h;
-		double viewportWidth = aspectRatio * viewportHeight;
+		//auto theta = degreesToRadians(vfov);
+		//auto h = tan(theta / 2);
+		//double viewportHeight = 2.0 * h;
+		//double viewportWidth = aspectRatio * viewportHeight;
+
+
+		//double viewportHeight = 2.0 * h;
+		//double viewportWidth = aspectRatio * viewportHeight;
 
 		w = unit(lookfrom - lookat);
 		u = unit(cross(vup, w));
 		v = cross(w, u);
 
 		origin = lookfrom;
-		horizontal = focusDist * viewportWidth * u;
-		vertical = focusDist *  viewportHeight * v;
+		horizontal = focusDist * (near_plane.y - near_plane.x) * u;
+		vertical = focusDist *  (near_plane.w - near_plane.z) * v;
 		lowerLeftCorner = origin - (horizontal / 2.0) - (vertical / 2.0) - focusDist * w;
 
 		lensRadius = aperture / 2;
@@ -38,9 +43,11 @@ struct camera
 
 	ray getRay(double s, double t) const
 	{
-		vec3 rd = lensRadius * randomInUnitSphere();
-		vec3 offset = u * rd.x() + v * rd.y();
+		//vec3 rd = lensRadius * randomInUnitSphere();
+		//vec3 offset = u * rd.x() + v * rd.y();
+		//return ray(origin + offset,  lowerLeftCorner + s * horizontal + t * vertical - origin - offset);
 
-		return ray(origin + offset,  lowerLeftCorner + s * horizontal + t * vertical - origin - offset);
+		return ray(origin,  lowerLeftCorner + s * horizontal + t * vertical - origin);
+
 	}
 };

@@ -1,0 +1,504 @@
+\documentclass[12pt]{article}
+%\usepackage{alltt}
+%\usepackage{helvet}
+%\usepackage[sfdefault]{roboto}
+\usepackage{amsmath}
+\usepackage[utf8]{inputenc}
+\usepackage[dvips]{graphicx}
+%\usepackage{a4wide}
+\usepackage{epsfig}
+\usepackage{fancybox}
+\usepackage{verbatim}
+\usepackage{array}
+\usepackage{latexsym}
+\usepackage{alltt}
+\usepackage{url}
+\usepackage{color}   % added for colored text
+%\usepackage{fullpage}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{color}
+\usepackage[hmargin=3cm,vmargin=5.0cm]{geometry}
+%\topmargin=0cm
+\topmargin=-1.8cm \addtolength{\textheight}{4.5cm}
+\addtolength{\textwidth}{1.0cm}
+%\setlength{\leftmargin}{-5cm}
+\setlength{\oddsidemargin}{0.0cm}
+\setlength{\evensidemargin}{0.0cm}
+
+%\renewcommand{\familydefault}{\sfdefault}
+
+\newcommand{\HRule}{\rule{\linewidth}{1mm}}
+\newcommand{\kutu}[2]{\framebox[#1mm]{\rule[-2mm]{0mm}{#2mm}}}
+\newcommand{\gap}{ \\[1mm] }
+
+\newcommand{\Q}{\raisebox{1.7pt}{$\scriptstyle\bigcirc$}}
+
+\definecolor{amaranth}{rgb}{0.9, 0.17, 0.31}
+\definecolor{gray}{rgb}{0.4,0.4,0.4}
+\definecolor{darkblue}{rgb}{0.0,0.0,0.6}
+\definecolor{cyan}{rgb}{0.0,0.6,0.6}
+\definecolor{red}{rgb}{0.6,0,0}
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+\definecolor{lightblue}{rgb}{0.0,0.0,0.9}
+\definecolor{darkred}{rgb}{0.6,0.0,0.0}
+
+\lstset{
+    %backgroundcolor=\color{lbcolor},
+    tabsize=4,
+    basicstyle=\fontsize{10}{10.3}\selectfont\sffamily,
+    numberstyle=\footnotesize,
+    aboveskip={0.0\baselineskip},
+    belowskip={0.0\baselineskip},
+    columns=fullflexible,
+    breaklines=true,
+    prebreak=\raisebox{0ex}[0ex][0ex]{\ensuremath{\hookleftarrow}},
+    frame=single,
+    showtabs=false,
+    showspaces=false,
+    showstringspaces=false,
+    identifierstyle=\color{amaranth},
+    keywordstyle=\color{rgb}{0,0,1},
+    commentstyle=\color[rgb]{0.133,0.545,0.133},
+    stringstyle=\color{amaranth},
+}
+
+\lstdefinelanguage{XML}
+{
+  morestring=[s][\color{red}]{"}{"},
+  morestring=[s][\color{black}]{>}{<},
+  morecomment=[s]{<?}{?>},
+  morecomment=[s][\color{dkgreen}]{<!--}{-->},
+  %stringstyle=\color{black},
+  identifierstyle=\color{black},
+  keywordstyle=\color{darkblue},
+  commentstyle=\color[rgb]{0.133,0.545,0.133},
+  stringstyle=\color{black},
+  morekeywords={Scene,BackgroundColor,ShadowRayEpsilon,
+  MaxRecursionDepth,Cameras,Camera,Position,Gaze,Up,
+  NearPlane,NearDistance,ImageResolution,ImageName,
+  Material,Materials,VertexData,Mesh,Triangle,Sphere,
+  Faces,Lights,AmbientLight,PointLight,Objects,Indices,
+  AmbientReflectance,DiffuseReflectance,SpecularReflectance,PhongExponent,MirrorReflectance,Intensity,Center,Radius,xmlns,version}% list your attributes here
+}
+
+\begin{document}
+
+\noindent \HRule \\[3mm]
+\small
+\begin{tabular}[b]{lp{1.2cm}r}
+\href{https://www.metu.edu.tr/}{\epsfig{file=metulogo.eps,width=5mm}} Middle East Technical
+University &  &
+\href{https://ceng.metu.edu.tr/information}{\epsfig{file=bmblogo.eps,width=5mm}} Department of Computer Engineering \\
+\end{tabular} \\
+\begin{center}
+
+                 \LARGE \textbf{CENG 795} \\[4mm]
+                 \Large Advanced Ray Tracing \\[4mm]
+                \normalsize Fall '2024-2025 \\
+                    \normalsize Assignment 1 - Recursive Ray Tracing \\
+                    \normalsize (v.1.0)
+\end{center}
+\HRule
+
+\begin{center}
+Due date: October 22, 2024, Tuesday, 23:59
+\end{center}
+
+
+\section{Objectives}
+Ray tracing is a fundamental rendering algorithm. It is commonly used
+for animations and architectural simulations, in which the quality of
+the created images is more important than the time it takes to create
+them. In this assignment, you are going to implement a recursive ray 
+tracer that simulates the propagation of light in the real world.
+
+\vspace{0.5cm} \noindent \textbf{Keywords:} \emph{recursive ray tracing,
+    light propagation, geometric optics, ray-object intersections,
+    surface shading, conductors and dielectrics}
+
+\section{Specifications}
+\begin{enumerate}
+
+\item \textbf{}You should name your executable as ``raytracer''.
+
+\item \textbf{}Your executable will take an XML scene file as argument
+(e.g. ``scene.xml''). A parser will be given to you, so that you do not
+have to worry about parsing the file yourself. The format of the file
+will be explained in Section \ref{sec:sceneFile}. You should be able to
+run your executable via command  ``./raytracer scene.xml''.
+
+\item \textbf{}You will save the resulting images in the PNG format. You
+can use a library of your choice for saving PNG images.
+
+\item \textbf{}The scene file may contain multiple camera
+configurations. You should render as many images as the number of
+cameras. The output filenames for each camera is also specified in the
+XML file.
+
+\item \textbf{}There is no time limit for rendering the input scenes.
+However, you should report your time measurements in your blog post. Try
+to write your code as optimized as possible. But if a scene takes too
+long to render, do not worry yet. Acceleration structures that we will
+learn later should help you in the second homework.
+
+\item \textbf{}You should use Blinn-Phong shading model for the specular
+shading computations.  Mirrors and dielectrics should obey Fresnel
+reflection rules.  Dielectrics are assumed to be isotropic and should
+obey Beer's law.
+
+\item \textbf{}You will implement two types of light sources: point and
+ambient. There may be multiple point light sources and a single ambient
+light. The values of these lights will be given as (R, G, B) color
+triplets that are \underline{not} restricted to $[0, 255]$ range (however,
+        they cannot be negative as negative light does not make sense).
+Any pixel color value that is calculated by shading computations and is
+greater than 255 must be clamped to 255 and rounded to the nearest
+integer before writing it to the output PNG file. This step will be
+replaced by the application of a tone mapping operator in our later
+homeworks.
+
+\item \textbf{}Point lights will be defined by their intensity (power
+        per unit solid angle). The irradiance due to such a light source
+falls off as inversely proportional to the squared distance from the
+light source. To simulate this effect, you must compute the irradiance
+at a distance of $d$ from a point light as:
+%
+\begin{center}
+$E(d) = \frac{I}{d^2}$,
+\end{center}
+%
+where $I$ is the original light intensity (a triplet of RGB values given
+in the XML file) and $E(d)$ is the irradiance at distance $d$
+from the light source.
+
+\item \textbf{Back-face culling} is a method used to accelerate the ray
+- scene intersections by not computing intersections with triangles
+whose normals are pointing away from the camera. Its implementation is
+simple and done by calculating the dot product of the ray direction with
+the normal vector of the triangle. If the sign of the result is
+positive, then that triangle is ignored. Note that shadow rays should
+not use back-face culling. In this homework, back-face culling
+implementation is optional. Experiment with enabling and disabling it in
+your ray tracers and report your time measurements in your blog post.
+
+\item \textbf{Degenerate triangles} are those triangles whose at least
+two vertices coincide.  The input files given to you should be free of
+such cases, but models downloaded from the Internet occasionally have
+this problem. You can put a check in your ray tracer either to detect or
+ignore such triangles (using such triangles usually produce NaN values).
+
+\end{enumerate}
+
+\section{Scene File}
+\label{sec:sceneFile}
+
+\noindent The scene file will be formatted as an XML file
+(see Section \ref{sec:sampleSceneFile}). In this file, there
+may be different numbers of materials, vertices, triangles,
+spheres, lights, and cameras. Each of these are defined
+by a unique integer ID. The IDs for each type of element
+will start from one and increase sequentially. Also
+notice that, in the XML file:\\
+
+$\cdot$ Every number represented by X, Y and Z is a floating point number. \\
+
+$\cdot$ Every number represented by R, G, B, and N is an integer. \\
+
+\noindent Explanations for each XML tag are provided below:
+
+\begin{itemize}
+
+\item \textbf{BackgroundColor:} Specifies the R, G, B values of
+the background. If a ray sent through a pixel does not hit
+any object, the pixel will be set to this color. Only
+applicable for primary rays sent through pixels.
+
+\item \textbf{ShadowRayEpsilon:} When  a  ray  hits  an  object,  you
+are  going  to  send  a shadow  ray from  the intersection  point  to
+each point  light  source to decide whether the hit point is in shadow
+or not.  Due  to  floating  point  precision  errors, sometimes  the
+shadow ray  hits  the  same  object even  if  it  should  not.
+Therefore,  you must use this small ShadowRayEpsilon value, which is a
+floating point number, to move the intersection point a bit further from
+the hit point in the direction of the hit point's normal vector  so that
+the shadow ray does not intersect with the same object again. Note that
+ShadowRayEpsilon value can also be used to avoid self-intersections
+while casting reflection and refraction rays from the intersection point.
+
+\item \textbf{MaxRecursionDepth:} Specifies how many bounces the ray
+makes off of conductor and dielectric objects.  Primary  rays are
+assumed to start with zero bounce count.
+
+\item \textbf{Camera:} 
+
+$\cdot$\textbf{Position}  parameters  define  the  coordinates  of  the  camera.
+
+$\cdot$\textbf{Gaze}  parameters define the direction that the camera is
+looking at. You must assume that the Gaze vector of the camera is always
+perpendicular to the image plane.
+
+$\cdot$\textbf{Up} parameters define the up vector of 
+the  camera.
+
+$\cdot$\textbf{NearPlane}  attribute  defines  the  coordinates  of  the
+image  plane  with Left, Right, Bottom, Top floating point parameters,
+       respectively.
+
+$\cdot$\textbf{NearDistance} defines the distance of the image plane to 
+the camera.
+
+$\cdot$\textbf{ImageResolution} defines the resolution of the image with
+Width and Height integer parameters, respectively.
+
+$\cdot$\textbf{ImageName} defines the name  of  the  output file.
+
+\noindent Cameras defined in this homework will be right-handed by
+default. The mapping of Up and Gaze vectors to the camera terminology
+used in the course slides is given as:
+%
+\begin{align*}
+\text{Up} &= v\\
+\text{Gaze} &= -w\\
+u &= v \times w
+\end{align*}
+%
+\item \textbf{AmbientLight:}  is defined by just an X, Y, Z radiance
+triplet. This is the amount of light received by each object even when
+the object is in shadow. Color channel order of this triplet is RGB.
+
+\item \textbf{PointLight:} is defined by a position and an intensity,
+    which are all floating point numbers. The color channel order of
+    intensity is RGB.
+
+\item \textbf{Material:} A material can be defined with ambient,
+diffuse, and specular properties for each color
+channel. The values are floats between 0.0 and 1.0, and color
+channel order is RGB. PhongExponent defines the specularity
+exponent in Blinn-Phong shading. For reflection and refraction, 
+the material type attribute must be checked. The values can be
+``mirror'', ``conductor'', and ``dielectric''. For mirrors, do
+\underline{not} apply
+Fresnel reflection. It is assumed that such surfaces have
+constant reflectivity (as indicated by the MirrorReflectance
+        element). For both conductors and dielectrics, you
+\underline{should} apply Fresnel reflection. Fresnel calculations
+should be done using the values of the RefractionIndex and
+AbsorptionIndex elements.
+For conductors you should still
+use MirrorReflectance to further modulate the reflectivity of
+different color channels. We do this to induce a sense of color
+for metal materials. You can see some examples of gold materials
+in the input files. Finally for dielectrics you must use the
+``AbsorptionCoefficient'' element to attenuate different colors
+using different amounts. This way we can also induce color for
+dielectric (e.g. glass) materials. You need to use this
+coefficient for the ``c'' parameter in the Beer's Law formula:
+%
+\begin{align*}
+L(x) = L(0)\exp(-cx),
+\end{align*}
+%
+where $L(x)$ is the luminance after a refracted ray travels a distance
+of $x$ inside the material, $L(0)$ is the luminance at the interface of the
+material, and $c$ is equal to the ``AbsorptionCoefficient''. Note that
+$c$ is a triplet to simulate the fact that a material may absorb different
+colors by different amounts.
+
+\item \textbf{VertexData:} Each  line  contains  a  vertex  whose  x,
+y, and  z  coordinates  are  given as floating point values,
+respectively. The first vertex's ID is 1.
+
+\item \textbf{Mesh:} Each mesh is composed of several faces. A face is
+actually a triangle which contains three vertices. When defining a mesh,
+each line in Faces attribute defines a triangle. Therefore,
+each line is composed of three integer vertex IDs given in
+counter-clockwise order (see Triangle explanation below).
+Material attribute represents the material ID of the mesh. Some meshes
+use Stanford Polygon File Format (PLY). See
+\url{http://paulbourke.net/dataformats/ply/} for the definition of this
+format and parser codes.
+
+\item \textbf{Triangle:} A  triangle is  represented  by Material and
+Indices attributes. Material attribute represents  the material ID.
+Indices are the integer vertex IDs  of  the vertices that construct  the
+triangle. Vertices are given in counter-clockwise order, which is
+important when you want to  calculate  the  normals  of  the  triangles.
+Counter-clockwise order means that if you close your right-hand
+following the order of the vertices, your thumb points in the direction
+of the surface normal.
+
+\item \textbf{Sphere:} A  sphere  is  represented  by  Material,
+Center, and  Radius  attributes.  Material attribute represents the
+material ID. Center represents the vertex ID of the point which is
+the center of the sphere. Radius attribute is the radius of the
+sphere.
+
+\end{itemize}
+
+\section{Hints \& Tips}
+\begin{enumerate}
+\item \textbf{}Start early. It takes time to get a ray tracer up and
+running -- especially if this is your first ray tracer!
+
+\item \textbf{}You may  use  the -O3  option while  compiling  your  code for  optimization. This  itself will 
+provide a huge performance improvement.
+
+\item \textbf{}Try to pre-compute anything that would be used multiple times and save these results. For 
+example, you can pre-compute the normals of the triangles and save it in your triangle data 
+structure when you read the input file.
+
+\item \textbf{}If you see generally correct but noisy results (black dots), it is most likely that there is a 
+floating point precision error (you may be checking for exact equality of two FP numbers 
+instead of checking if they are within a small epsilon).
+
+\item \textbf{}For debugging purposes, consider using low resolution images. Also it may be necessary to 
+debug your code by tracing what happens for a single pixel (always simplify the problem 
+when debugging).
+
+\end{enumerate}
+
+\section{Bonus}
+
+I will be more than happy to give bonus points to students who
+make important contributions such as new scenes, importers/exporters
+between our XML format and other standard file formats. Note that a
+Blender
+exporter\footnote{\url{https://saksagan.ceng.metu.edu.tr/courses/ceng477/student/ceng477exporter.py}},
+which exports Blender data to our XML format, was written by one of our
+previous students. You can use this for designing a scene in Blender and
+exporting it to our file format.
+
+\section{Regulations}
+
+\begin{enumerate}
+
+\item \textbf{Programming Language:} C/C++ is the recommended language.
+However, other languages can be used if so desired. In the past, some
+some students used Rust or even Haskell for implementing their ray
+tracers.
+
+\item \textbf{Changing the Sample Codes:} You are free to modify any
+sample code provided with this homework.
+
+\item \textbf{Additional Libraries:} If you are planning to use any
+library other than \textit{(i)} the standard library of the language,
+\textit{(ii)} pthread, \textit{(iii)} the XML parser, and the PNG
+libraries please first ask about
+it on ODTUClass and get a confirmation. Common sense rules apply: if a
+library implements a ray tracing concept that you should be
+implementing yourself, do not use it!
+
+\item \textbf{Submission:} Submission will be done via ODTUClass. 
+To submit, Create a
+``\textbf{tar.gz}''  file  named  ``raytracer.tar.gz'' that
+contains all your source code files and a Makefile. The
+executable should  be  named as  ``raytracer'' and  should  be
+able  to  be  run  using  the following commands (scene.xml
+        will be provided by us during grading):\\
+
+\indent \textbf{tar -xf raytracer.tar.gz}\\
+\indent \textbf{make}\\
+\indent \textbf{./raytracer scene.xml}\\
+
+\noindent Any error in these steps will cause point penalty during
+grading.
+
+\item \textbf{Late Submission:} You can submit your codes up to 3 days
+late. Each late day will cause a 10 point penalty.
+
+\item \textbf{Cheating:} \textbf{We have zero tolerance policy
+for cheating}.  People involved in cheating will be
+punished according to the university regulations and will
+get 0 from the homework. You can discuss algorithmic choices,
+but sharing code between groups or using third party code
+is strictly forbidden. By the nature of this class, many past students
+make their ray tracers publicly available. You must refrain from using
+them at all costs.
+
+\item \textbf{Forum:} Check the ODTUClass forum regularly for
+updates/discussions.
+
+\item \textbf{Evaluation:} The basis of evaluation is your blog posts.
+Please try to create interesting and informative blog posts about your
+ray tracing adventures. You can check out various past blogs for
+inspiration. However, also expect your codes to be compiled and tested
+on some examples for verification purposes. So the images that you share
+in your blog post must directly correspond to your ray tracer outputs.
+
+\end{enumerate}
+
+
+\newpage
+
+\section{Sample Scene File}
+\label{sec:sampleSceneFile}
+
+\lstset{language=XML}
+
+\begin{lstlisting}[mathescape]
+<Scene>
+		<BackgroundColor>R G B</BackgroundColor>
+		<ShadowRayEpsilon>X</ShadowRayEpsilon>
+		<MaxRecursionDepth>N</MaxRecursionDepth>
+		<Cameras>
+				<Camera id="Cid">
+						<Position>X Y Z</Position>
+						<Gaze>X	Y Z</Gaze>
+						<Up> X Y Z </Up>
+						<NearPlane>Left	Right Bottom Top</NearPlane>
+						<NearDistance>X</NearDistance>
+						<ImageResolution>Width Height</ImageResolution>
+						<ImageName>ImageName.ppm</ImageName>
+				</Camera>
+		</Cameras>
+		<Lights>
+				<AmbientLight>X	Y Z</AmbientLight>
+				<PointLight	id="Lid">
+						<Position>X Y Z</Position>
+						<Intensity>X Y Z</Intensity>
+				</PointLight>
+		</Lights>
+		<Materials>
+				<Material id="Mid" [type="mirror"]>
+						<AmbientReflectance>X Y Z</AmbientReflectance>
+						<DiffuseReflectance>X Y Z</DiffuseReflectance>
+						<SpecularReflectance>X Y Z</SpecularReflectance>
+						<MirrorReflectance>X Y Z</MirrorReflectance>
+						<PhongExponent>X</PhongExponent>
+				</Material>
+		</Materials>
+		<VertexData>
+				$V_{1X}$ $V_{1Y}$ $V_{1Z}$
+				$V_{2X}$ $V_{2Y}$ $V_{2Z}$
+				.....................
+		</VertexData>
+		<Objects>
+				<Mesh	id="Meid">
+						<Material>N</Material>
+						<Faces>
+								$F_{1\_V1}$ $F_{1\_V2}$ $F_{1\_V3}$
+								$F_{2\_V1}$ $F_{2\_V2}$ $F_{2\_V3}$
+								.........................
+						</Faces>
+				</Mesh>
+				<Triangle	id="Tid">
+						<Material>N</Material>
+						<Indices>
+								$V_1$ $V_2$ $V_3$
+						</Indices>
+				</Triangle>
+				<Sphere	id="Sid">
+						<Material>N</Material>
+						<Center>N</Center>
+						<Radius>X</Radius>
+				</Sphere>
+		</Objects>	
+</Scene>
+\end{lstlisting}
+
+\normalsize
+
+
+\end{document}
