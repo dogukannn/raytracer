@@ -21,8 +21,8 @@ struct triangle : public hittable
 inline bool triangle::hit(const ray& r, double tMin, double tMax, hitRecord& rec) const
 {
 	// Triangle vertices
-    const vec3& v0 = p1; // Assume v0_, v1_, and v2_ are triangle vertices defined in your class
-    const vec3& v1 = p2;
+    const vec3& v0 = p1;
+	const vec3& v1 = p2;
     const vec3& v2 = p3;
 
     // Edge vectors of the triangle

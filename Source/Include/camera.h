@@ -49,7 +49,7 @@ struct camera
 		//vec3 offset = u * rd.x() + v * rd.y();
 		//return ray(origin + offset,  lowerLeftCorner + s * horizontal + t * vertical - origin - offset);
 
-		return ray(origin,  lowerLeftCorner + s * horizontal + t * vertical - origin);
+		return ray(origin,  unit(lowerLeftCorner + s * horizontal + t * vertical - origin));
 
 	}
 };

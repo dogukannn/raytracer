@@ -37,7 +37,7 @@ struct material
 		{
 
 			auto shadow_ray = ray(rec.p, (light->position - rec.p));
-			shadow_ray.orig += shadow_ray.direction() * 0.0001;
+			//shadow_ray.orig += shadow_ray.direction() * 0.0001;
 
 			hitRecord srec;
 			if (scene.hit(shadow_ray, 0.01, 1.0, srec))
@@ -49,7 +49,7 @@ struct material
 			res += diffuse_reflectance * cost * light->intensity * (1 / (light->position - rec.p).lengthSquared());
 
 			auto wi = unit(light->position - rec.p);
-			auto w0 = unit(cam.origin - rec.p);
+			auto w0 = -unit(r_in.direction());
 			auto h = unit(wi + w0);
 			auto cosa = std::max(0.0, dot(rec.normal, h));
 			res += specular_reflectance * pow(cosa, phong_exponent) * light->intensity * (1 / (light->position - rec.p).lengthSquared());

@@ -14,6 +14,11 @@
 #include "Include/parser.h"
 #include "Include/triangle.h"
 
+color beerslaw(double t, color absorp)
+{
+	return color(exp(-t * absorp.x()), exp(-t * absorp.y()), exp(-t * absorp.z()));
+}
+
 color RayColor(const ray& r, const scene_list& world, const camera& cam, int depth)
 {
 
@@ -40,6 +45,11 @@ color RayColor(const ray& r, const scene_list& world, const camera& cam, int dep
 			auto d = unit(r.direction());
 			double cosi = dot(-d, rec.normal);
 			double k = 1.0 - refractionRatio * refractionRatio * (1 - cosi * cosi);
+			if (k < 0)
+			{
+				return (diemat->calc_color(r, rec, world, cam)
+					+ 1.0f * RayColor(diemat->reflected_ray(r, rec), world, cam, depth - 1)) * beerslaw((rec.p - r.origin()).length(), diemat->absorption_coef);
+			}
 			double cosph = sqrt(k);
 			vec3 refractdir = d * refractionRatio + rec.normal * (refractionRatio * cosi - sqrt(k));
 			refractdir = unit(refractdir);
@@ -52,8 +62,15 @@ color RayColor(const ray& r, const scene_list& world, const camera& cam, int dep
 			double frefl = 0.5 * (r1 * r1 + r2 * r2);
 			double frefr = 1 - frefl;
 
+			if(!rec.frontFace)
+			{
+				return (diemat->calc_color(r, rec, world, cam)
+					+ frefr * RayColor(ray(rec.p, refractdir), world, cam, depth - 1) 
+					+ frefl * RayColor(diemat->reflected_ray(r, rec), world, cam, depth - 1)) * beerslaw((rec.p - r.origin()).length(), diemat->absorption_coef);
+			}
+
 			return diemat->calc_color(r, rec, world, cam)
-				+ frefr * RayColor(ray(rec.p + refractdir * 0.001, refractdir), world, cam, depth - 1)
+				+ frefr * RayColor(ray(rec.p, refractdir), world, cam, depth - 1)
 				+ frefl * RayColor(diemat->reflected_ray(r, rec), world, cam, depth - 1);
 		}
 		else if (auto condmat = rec.mat_ptr->as_conductor())
@@ -221,6 +238,16 @@ void render_camera(parser::Scene& scene, int camera_idx, scene_list& world)
 	{
 		vec.resize(imageWidth);
 	}
+
+	//{
+	//	color pixelColor(0, 0, 0);
+	//	const auto u = (751 + 0.5f) / (imageWidth - 1);
+	//	const auto v = (720 - 454 + 0.5f) / (imageHeight - 1);
+	//	ray r = cam.getRay(u, v);
+	//	pixelColor += RayColor(r, world, cam, maxDepth);
+	//return;
+	//}
+
 
 	std::vector<std::future<void>> threads;
 	for (int j = imageHeight - 1; j >= 0; j--)
