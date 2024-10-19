@@ -3,6 +3,49 @@
 #include <cmath>
 #include <iostream>
 
+struct vec3i
+{
+	int e[3];
+
+	vec3i() : e{0,0,0} {} 
+	vec3i(int e0, int e1, int e2) : e{e0, e1, e2} {}
+
+	int x() const { return e[0]; }
+	int y() const { return e[1]; }
+	int z() const { return e[2]; }
+
+	vec3i operator-() const { return vec3i(-e[0], -e[1], -e[2]); }
+	int operator[](int i) const { return e[i]; }
+	int& operator[](int i) { return e[i]; }
+
+	vec3i& operator+=(const vec3i& v)
+	{
+		e[0] += v.e[0];
+		e[1] += v.e[1];
+		e[2] += v.e[2];
+		return *this;
+	}
+
+	vec3i& operator*=(const int t)
+	{
+		e[0] *= t;
+		e[1] *= t;
+		e[2] *= t;
+		return *this;
+	}
+
+	vec3i& operator/=(const int t)
+	{
+		return *this *= 1 / t;
+	}
+
+	vec3i& operator/=(const double t)
+	{
+		return *this *= 1.0 / t;
+	}
+
+};
+
 
 struct vec3
 {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "hittable.h"
+#include "point_light.h"
 
 #include <memory>
 #include <vector>
@@ -10,6 +11,7 @@ struct scene_list : public hittable
 	std::vector<std::shared_ptr<hittable>> objects;
 	std::vector<std::shared_ptr<point_light>> point_lights;
 	color ambient_light;
+	color bg_color;
 
 	scene_list() = default;
 	scene_list(std::shared_ptr<hittable> object) { add(object); }

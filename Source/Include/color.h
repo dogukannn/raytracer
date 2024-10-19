@@ -4,15 +4,9 @@
 
 #include <iostream>
 
-void write_color(std::ostream &out, const color& pixelColor, int samplesPerPixel)
+void write_color(std::ostream &out, const color& pixelColor)
 {
-	auto scale = 1.0 / samplesPerPixel;
-	auto r = std::sqrt(pixelColor.x() * scale);
-	auto g = std::sqrt(pixelColor.y() * scale);
-	auto b = std::sqrt(pixelColor.z() * scale);
-
-	
-	out << static_cast<int>(256 * clamp(r, 0.0, 0.999)) << ' '
-		<< static_cast<int>(256 * clamp(g, 0.0, 0.999)) << ' '
-		<< static_cast<int>(256 * clamp(b, 0.0, 0.999)) << std::endl;
+	out << static_cast<int>(clamp(pixelColor.x(), 0.0, 255.999)) << ' '
+		<< static_cast<int>(clamp(pixelColor.y(), 0.0, 255.999)) << ' '
+		<< static_cast<int>(clamp(pixelColor.z(), 0.0, 255.999)) << std::endl;
 }

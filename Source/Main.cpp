@@ -14,7 +14,7 @@
 #include "Include/parser.h"
 #include "Include/triangle.h"
 
-color RayColor(const ray& r, const hittable& world, int depth)
+color RayColor(const ray& r, const scene_list& world, const camera& cam, int depth)
 {
 
 	if(depth <= 0)
@@ -25,90 +25,67 @@ color RayColor(const ray& r, const hittable& world, int depth)
 	hitRecord rec;
 	if(world.hit(r, 0.001, infinity, rec))
 	{
-		const vec3 unitDirection = unit(r.direction());
-		return -dot(rec.normal, unitDirection) * color(1, 1, 0);
-		ray scattered;
-		color attenuation;
-		if (rec.mat_ptr->scatter(r, rec, attenuation, scattered))
-			return attenuation * RayColor(scattered, world, depth - 1);
-		return color(0, 0, 0);
+		if(auto basicmat = rec.mat_ptr->as_basic())
+		{
+			return basicmat->calc_color(r, rec, world, cam);
+		}
+		else if (auto mirrormat = rec.mat_ptr->as_mirror())
+		{
+			return mirrormat->calc_color(r, rec, world, cam) + mirrormat->mirror_reflectance * RayColor(mirrormat->reflected_ray(r, rec), world, cam, depth - 1);
+		}
+		else if (auto diemat = rec.mat_ptr->as_dielectric())
+		{
+			double refractionRatio = rec.frontFace ? (1.0 / diemat->refraction_index) : diemat->refraction_index;
+			//refractionRatio = 1.04f;
+			auto d = unit(r.direction());
+			double cosi = dot(-d, rec.normal);
+			double k = 1.0 - refractionRatio * refractionRatio * (1 - cosi * cosi);
+			double cosph = sqrt(k);
+			vec3 refractdir = d * refractionRatio + rec.normal * (refractionRatio * cosi - sqrt(k));
+			refractdir = unit(refractdir);
+
+			double n1 = rec.frontFace ? (1.0) : diemat->refraction_index;
+			double n2 = rec.frontFace ? (diemat->refraction_index) : 1.0f;
+			double r2 = (n2 * cosi - n1 * cosph) / (n2 * cosi + n1 * cosph);
+			double r1 = (n1 * cosi - n2 * cosph) / (n1 * cosi + n2 * cosph);
+
+			double frefl = 0.5 * (r1 * r1 + r2 * r2);
+			double frefr = 1 - frefl;
+
+			return diemat->calc_color(r, rec, world, cam)
+				+ frefr * RayColor(ray(rec.p + refractdir * 0.001, refractdir), world, cam, depth - 1)
+				+ frefl * RayColor(diemat->reflected_ray(r, rec), world, cam, depth - 1);
+		}
+		else if (auto condmat = rec.mat_ptr->as_conductor())
+		{
+			auto d = unit(r.direction());
+			double cosi = dot(-d, rec.normal);
+
+			double n2 = condmat->refraction_index;
+			double k2 = condmat->absorption_index;
+
+			double rs = ((n2 * n2 + k2 * k2) - 2 * n2 * cosi + cosi * cosi) / ((n2 * n2 + k2 * k2) + 2 * n2 * cosi + cosi * cosi);
+			double rp = ((n2 * n2 + k2 * k2) * cosi * cosi - 2 * n2 * cosi + 1) / ((n2 * n2 + k2 * k2) * cosi * cosi + 2 * n2 * cosi + 1);
+
+			double frefl = 0.5 * (rs + rp);
+
+			return condmat->calc_color(r, rec, world, cam)
+				+ condmat->mirror_reflectance * frefl * RayColor(condmat->reflected_ray(r, rec), world, cam, depth - 1);
+		}
 	}
-	const vec3 unitDirection = unit(r.direction());
-	auto t = 0.5 * (unitDirection.y() + 1.0);
-	return (1.0 - t) * color(1.0, 1.0, 1.0) + t * color(0.5, 0.7, 1.0);
-}
 
-scene_list random_scene() {
-    scene_list world;
-
-    auto ground_material = std::make_shared<lambertian>(color(0.5, 0.5, 0.5));
-    world.add(std::make_shared<sphere>(point3(0,-1000,0), 1000, ground_material));
-
-    for (int a = -11; a < 11; a++) {
-        for (int b = -11; b < 11; b++) {
-            auto choose_mat = randomDouble();
-            point3 center(a + 0.9*randomDouble(), 0.2, b + 0.9*randomDouble());
-
-            if ((center - point3(4, 0.2, 0)).length() > 0.9) {
-                std::shared_ptr<material> sphere_material;
-
-                if (choose_mat < 0.8) {
-                    // diffuse
-                    auto albedo = color::random() * color::random();
-                    sphere_material = std::make_shared<lambertian>(albedo);
-                    world.add(std::make_shared<sphere>(center, 0.2, sphere_material));
-                } else if (choose_mat < 0.95) {
-                    // metal
-                    auto albedo = color::random(0.5, 1);
-                    auto fuzz = randomDouble(0, 0.5);
-                    sphere_material = std::make_shared<metal>(albedo, fuzz);
-                    world.add(std::make_shared<sphere>(center, 0.2, sphere_material));
-                } else {
-                    // glass
-                    sphere_material = std::make_shared<dielectric>(1.5);
-                    world.add(std::make_shared<sphere>(center, 0.2, sphere_material));
-                }
-            }
-        }
-    }
-
-    auto material1 = std::make_shared<dielectric>(1.5);
-    world.add(std::make_shared<sphere>(point3(0, 1, 0), 1.0, material1));
-
-    auto material2 = std::make_shared<lambertian>(color(0.4, 0.2, 0.1));
-    world.add(std::make_shared<sphere>(point3(-4, 1, 0), 1.0, material2));
-
-    auto material3 = std::make_shared<metal>(color(0.7, 0.6, 0.5), 0.0);
-    world.add(std::make_shared<sphere>(point3(4, 1, 0), 1.0, material3));
-
-    return world;
+	return world.bg_color;
 }
 
 
-scene_list hittableListFromScene(const parser::Scene& scene)
+color to_c(parser::Vec3i v)
 {
-	scene_list world;
+	return { (double)v.x, (double)v.y, (double)v.z };
+}
 
-	auto albedo = color::random() * color::random();
-	auto random_material = std::make_shared<lambertian>(albedo);
-
-	for(auto& face : scene.meshes[0].faces)
-	{
-		point3 p1 = { scene.vertex_data[face.v0_id-1].x,
-						scene.vertex_data[face.v0_id-1].y,
-						scene.vertex_data[face.v0_id-1].z };
-
-		point3 p2 = { scene.vertex_data[face.v1_id-1].x,
-						scene.vertex_data[face.v1_id-1].y,
-						scene.vertex_data[face.v1_id-1].z };
-
-		point3 p3 = { scene.vertex_data[face.v2_id-1].x,
-						scene.vertex_data[face.v2_id-1].y,
-						scene.vertex_data[face.v2_id-1].z };
-
-		world.add(std::make_shared<triangle>(p1, p2, p3, random_material));
-	}
-	return world;
+color to_c(parser::Vec3f v)
+{
+	return { v.x, v.y, v.z };
 }
 
 point3 to_p(parser::Vec3f v)
@@ -120,6 +97,102 @@ vec3 to_v(parser::Vec3f v)
 {
 	return { v.x, v.y, v.z };
 }
+
+std::shared_ptr<material> convert_material(const parser::Material& mat)
+{
+	std::shared_ptr<material> mesh_material;
+	if(mat.is_mirror)
+	{
+		mesh_material = std::make_shared<mirror>(to_c(mat.ambient), to_c(mat.diffuse), to_c(mat.specular), to_c(mat.mirror));
+	}
+	else if(mat.is_dielectric)
+	{
+		mesh_material = std::make_shared<dielectric>(to_c(mat.ambient), to_c(mat.diffuse), to_c(mat.specular), to_c(mat.absorption_coef), mat.refraction_index);
+	}
+	else if(mat.is_conductor)
+	{
+		mesh_material = std::make_shared<conductor>(to_c(mat.ambient), to_c(mat.diffuse), to_c(mat.specular), to_c(mat.mirror), mat.refraction_index, mat.absorption_index);
+	}
+	else
+	{
+		mesh_material = std::make_shared<basic>(to_c(mat.ambient), to_c(mat.diffuse), to_c(mat.specular));
+	}
+
+	mesh_material->phong_exponent = mat.phong_exponent;
+	return mesh_material;
+}
+
+scene_list hittableListFromScene(const parser::Scene& scene)
+{
+	scene_list world;
+
+	for(auto& mesh : scene.meshes)
+	{
+		auto& mat = scene.materials[mesh.material_id-1];
+
+		std::shared_ptr<material> mesh_material = convert_material(mat);
+				
+		for(auto& face : mesh.faces)
+		{
+			point3 p1 = { scene.vertex_data[face.v0_id-1].x,
+							scene.vertex_data[face.v0_id-1].y,
+							scene.vertex_data[face.v0_id-1].z };
+
+			point3 p2 = { scene.vertex_data[face.v1_id-1].x,
+							scene.vertex_data[face.v1_id-1].y,
+							scene.vertex_data[face.v1_id-1].z };
+
+			point3 p3 = { scene.vertex_data[face.v2_id-1].x,
+							scene.vertex_data[face.v2_id-1].y,
+							scene.vertex_data[face.v2_id-1].z };
+
+			world.add(std::make_shared<triangle>(p1, p2, p3, mesh_material));
+		}
+	}
+
+	for(auto& sp : scene.spheres)
+	{
+		point3 c = to_p(scene.vertex_data[sp.center_vertex_id-1]);
+
+		auto& mat = scene.materials[sp.material_id-1];
+		std::shared_ptr<material> mesh_material = convert_material(mat);
+
+		world.add(std::make_shared<sphere>(c, sp.radius, mesh_material));
+	}
+
+	for(auto& tr : scene.triangles)
+	{
+		point3 p1 = { scene.vertex_data[tr.indices.v0_id-1].x,
+						scene.vertex_data[tr.indices.v0_id-1].y,
+						scene.vertex_data[tr.indices.v0_id-1].z };
+
+		point3 p2 = { scene.vertex_data[tr.indices.v1_id-1].x,
+						scene.vertex_data[tr.indices.v1_id-1].y,
+						scene.vertex_data[tr.indices.v1_id-1].z };
+
+		point3 p3 = { scene.vertex_data[tr.indices.v2_id-1].x,
+						scene.vertex_data[tr.indices.v2_id-1].y,
+						scene.vertex_data[tr.indices.v2_id-1].z };
+
+		auto& mat = scene.materials[tr.material_id-1];
+		std::shared_ptr<material> mesh_material = convert_material(mat);
+		world.add(std::make_shared<triangle>(p1, p2, p3, mesh_material));
+	}
+	
+
+	world.ambient_light = to_c(scene.ambient_light);
+	for(auto& pl : scene.point_lights)
+	{
+		point_light p;
+		p.intensity = to_c(pl.intensity);
+		p.position = to_p(pl.position);
+		world.point_lights.push_back(std::make_shared<point_light>(p));
+	}
+
+	world.bg_color = to_c(scene.background_color);
+	return world;
+}
+
 
 void render_camera(parser::Scene& scene, int camera_idx, scene_list& world)
 {
@@ -160,7 +233,7 @@ void render_camera(parser::Scene& scene, int camera_idx, scene_list& world)
 					const auto u = (i + 0.5f) / (imageWidth - 1);
 					const auto v = (j + 0.5f) / (imageHeight - 1);
 					ray r = cam.getRay(u, v);
-					pixelColor += RayColor(r, world, maxDepth);
+					pixelColor += RayColor(r, world, cam, maxDepth);
 					img[j][i] = pixelColor;
 				}));
 
@@ -185,7 +258,7 @@ void render_camera(parser::Scene& scene, int camera_idx, scene_list& world)
 		std::cerr << "\r" << static_cast<int>((static_cast<double>(imageHeight - j) / imageHeight) * 100.0) << "% of file write is completed         " << std::flush;
 		for (int i = 0; i < imageWidth; i++)
 		{
-			write_color(image, img[j][i], 1);
+			write_color(image, img[j][i]);
 		}
 	}
 	std::cerr << "\nDone.\n";
@@ -201,7 +274,7 @@ int main(int argc, char* argv[])
 {
 
 	parser::Scene scene;
-	scene.loadFromXml("../../Assets/bunny.xml");
+	scene.loadFromXml("../../Assets/scienceTree_glass.xml");
 
 	//image
 

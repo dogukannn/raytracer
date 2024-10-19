@@ -34,8 +34,10 @@ struct camera
 		v = cross(w, u);
 
 		origin = lookfrom;
-		horizontal = focusDist * (near_plane.y - near_plane.x) * u;
-		vertical = focusDist *  (near_plane.w - near_plane.z) * v;
+		//horizontal = focusDist * (near_plane.y - near_plane.x) * u;
+		//vertical = focusDist *  (near_plane.w - near_plane.z) * v;
+		horizontal = (near_plane.y - near_plane.x) * u;
+		vertical = (near_plane.w - near_plane.z) * v;
 		lowerLeftCorner = origin - (horizontal / 2.0) - (vertical / 2.0) - focusDist * w;
 
 		lensRadius = aperture / 2;

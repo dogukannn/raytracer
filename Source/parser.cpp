@@ -118,6 +118,8 @@ void parser::Scene::loadFromXml(const std::string &filepath)
     while (element)
     {
         material.is_mirror = (element->Attribute("type", "mirror") != NULL);
+        material.is_conductor = (element->Attribute("type", "conductor") != NULL);
+        material.is_dielectric = (element->Attribute("type", "dielectric") != NULL);
 
         child = element->FirstChildElement("AmbientReflectance");
         stream << child->GetText() << std::endl;
@@ -126,10 +128,11 @@ void parser::Scene::loadFromXml(const std::string &filepath)
         child = element->FirstChildElement("SpecularReflectance");
         stream << child->GetText() << std::endl;
         child = element->FirstChildElement("MirrorReflectance");
+        bool has_mirror = false;
         if (child)
         {
-            assert(material.is_mirror == true);
             stream << child->GetText() << std::endl;
+            has_mirror = true;
         }
         child = element->FirstChildElement("PhongExponent");
         bool has_phong_exponent = false;
@@ -139,15 +142,44 @@ void parser::Scene::loadFromXml(const std::string &filepath)
             has_phong_exponent = true;
         }
 
+        child = element->FirstChildElement("RefractionIndex");
+        bool has_refraction_index = false;
+        if(child)
+        {
+            stream << child->GetText() << std::endl;
+            has_refraction_index = true;
+        }
+
+        child = element->FirstChildElement("AbsorptionIndex");
+        bool has_absorption_index = false;
+        if(child)
+        {
+            stream << child->GetText() << std::endl;
+            has_absorption_index = true;
+        }
+
+        child = element->FirstChildElement("AbsorptionCoefficient");
+        bool has_absorption_coef = false;
+        if(child)
+        {
+            stream << child->GetText() << std::endl;
+            has_absorption_coef = true;
+        }
+
+
         stream >> material.ambient.x >> material.ambient.y >> material.ambient.z;
         stream >> material.diffuse.x >> material.diffuse.y >> material.diffuse.z;
         stream >> material.specular.x >> material.specular.y >> material.specular.z;
-        if (material.is_mirror)
-        {
+        if (has_mirror)
             stream >> material.mirror.x >> material.mirror.y >> material.mirror.z;
-        }
         if(has_phong_exponent)
 			stream >> material.phong_exponent;
+        if (has_refraction_index)
+            stream >> material.refraction_index;
+        if (has_absorption_index)
+            stream >> material.absorption_index;
+        if (has_absorption_coef)
+			stream >> material.absorption_coef.x >> material.absorption_coef.y >> material.absorption_coef.z;
 
         materials.push_back(material);
         element = element->NextSiblingElement("Material");
