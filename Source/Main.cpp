@@ -41,17 +41,22 @@ color RayColor(const ray& r, const scene_list& world, const camera& cam, int dep
 		else if (auto diemat = rec.mat_ptr->as_dielectric())
 		{
 			double refractionRatio = rec.frontFace ? (1.0 / diemat->refraction_index) : diemat->refraction_index;
-			//refractionRatio = 1.04f;
 			auto d = unit(r.direction());
 			double cosi = dot(-d, rec.normal);
 			double k = 1.0 - refractionRatio * refractionRatio * (1 - cosi * cosi);
 			if (k < 0)
 			{
-				return (diemat->calc_color(r, rec, world, cam)
-					+ 1.0f * RayColor(diemat->reflected_ray(r, rec), world, cam, depth - 1)) * beerslaw((rec.p - r.origin()).length(), diemat->absorption_coef);
+				color ber = color(1,1,1);
+				hitRecord refrec;
+				if(world.hit(ray(rec.p, unit(diemat->reflected_ray(r, rec).direction())), 0.001, infinity, refrec))
+				{
+					ber = beerslaw(refrec.t, diemat->absorption_coef);
+				}
+				return RayColor(diemat->reflected_ray(r, rec), world, cam, depth - 1) * ber;
 			}
 			double cosph = sqrt(k);
-			vec3 refractdir = d * refractionRatio + rec.normal * (refractionRatio * cosi - sqrt(k));
+			//vec3 refractdir = d * refractionRatio + rec.normal * (refractionRatio * cosi - sqrt(k));
+			vec3 refractdir = (d + rec.normal * cosi) * refractionRatio - rec.normal * cosph;
 			refractdir = unit(refractdir);
 
 			double n1 = rec.frontFace ? (1.0) : diemat->refraction_index;
@@ -64,10 +69,35 @@ color RayColor(const ray& r, const scene_list& world, const camera& cam, int dep
 
 			if(!rec.frontFace)
 			{
-				return (diemat->calc_color(r, rec, world, cam)
-					+ frefr * RayColor(ray(rec.p, refractdir), world, cam, depth - 1) 
-					+ frefl * RayColor(diemat->reflected_ray(r, rec), world, cam, depth - 1)) * beerslaw((rec.p - r.origin()).length(), diemat->absorption_coef);
+				color col = color(0,0,0);
+
+				col += frefr * RayColor(ray(rec.p, refractdir), world, cam, depth - 1);
+
+				color ber = color(1,1,1);
+				hitRecord refrec;
+				if(world.hit(ray(rec.p, unit(diemat->reflected_ray(r, rec).direction())), 0.001, infinity, refrec))
+				{
+					ber = beerslaw(refrec.t, diemat->absorption_coef);
+				}
+
+				col += frefl * RayColor(diemat->reflected_ray(r, rec), world, cam, depth - 1) * ber;
+
+				return col;
 			}
+
+			auto col = diemat->calc_color(r, rec, world, cam);
+
+			color ber = color(1,1,1);
+			hitRecord refrec;
+			if(world.hit(ray(rec.p, refractdir), 0.001, infinity, refrec))
+			{
+				ber = beerslaw(refrec.t, diemat->absorption_coef);
+			}
+			col += frefr * RayColor(ray(rec.p, refractdir), world, cam, depth - 1) * ber;
+
+			col += frefl * RayColor(diemat->reflected_ray(r, rec), world, cam, depth - 1);
+			
+			return col;
 
 			return diemat->calc_color(r, rec, world, cam)
 				+ frefr * RayColor(ray(rec.p, refractdir), world, cam, depth - 1)
@@ -260,7 +290,7 @@ void render_camera(parser::Scene& scene, int camera_idx, scene_list& world)
 					const auto u = (i + 0.5f) / (imageWidth - 1);
 					const auto v = (j + 0.5f) / (imageHeight - 1);
 					ray r = cam.getRay(u, v);
-					pixelColor += RayColor(r, world, cam, maxDepth);
+					pixelColor += RayColor(r, world, cam, maxDepth-1);
 					img[j][i] = pixelColor;
 				}));
 
