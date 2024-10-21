@@ -14,6 +14,10 @@
 #include "Include/parser.h"
 #include "Include/triangle.h"
 
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "Include/stb_image_write.h"
+
 color beerslaw(double t, color absorp)
 {
 	return color(exp(-t * absorp.x()), exp(-t * absorp.y()), exp(-t * absorp.z()));
@@ -259,9 +263,6 @@ void render_camera(parser::Scene& scene, int camera_idx, scene_list& world)
 
 	camera cam(lookfrom, lookat, vup, scene_cam.near_plane, aspectRatio, aperture, distToFocus);
 
-	std::ofstream image(scene_cam.image_name + ".ppm");
-
-	image << "P3\n" << imageWidth << " " << imageHeight << "\n255\n";
 	std::vector<std::vector<color>> img;
 	img.resize(imageHeight);
 	for(auto& vec : img)
@@ -309,16 +310,27 @@ void render_camera(parser::Scene& scene, int camera_idx, scene_list& world)
 	{
 		thread.get();
 	}
-	std::cerr << std::endl;
+
+	//convert img data to raw for saving as png using stb (r g b floats range in 0.0f - 255.99f)
+	std::vector<unsigned char> raw;
+	raw.resize(imageWidth * imageHeight * 3);
+
 	for (int j = imageHeight - 1; j >= 0; j--)
 	{
-		std::cerr << "\r" << static_cast<int>((static_cast<double>(imageHeight - j) / imageHeight) * 100.0) << "% of file write is completed         " << std::flush;
 		for (int i = 0; i < imageWidth; i++)
 		{
-			write_color(image, img[j][i]);
+			auto& pixelColor = img[j][i];
+			int index = ((imageHeight - j - 1) * imageWidth + i) * 3;
+			raw[index] = static_cast<unsigned char>(clamp(pixelColor.x(), 0.0, 255.999));
+			raw[index + 1] = static_cast<unsigned char>(clamp(pixelColor.y(), 0.0, 255.999));
+			raw[index + 2] = static_cast<unsigned char>(clamp(pixelColor.z(), 0.0, 255.999));
 		}
 	}
-	std::cerr << "\nDone.\n";
+	
+	if (!stbi_write_png((scene_cam.image_name).c_str(), imageWidth, imageHeight, 3, raw.data(), 0))
+	{
+		std::cerr << "Failed to save image" << std::endl;
+	}
 
 	auto end = std::chrono::steady_clock::now();
 	std::cerr << "Elapsed time in milliseconds: "
@@ -329,11 +341,17 @@ void render_camera(parser::Scene& scene, int camera_idx, scene_list& world)
 
 int main(int argc, char* argv[])
 {
-
 	parser::Scene scene;
-	scene.loadFromXml("../../Assets/scienceTree_glass.xml");
-
-	//image
+	//parse args and load scene
+	if (argc > 1)
+	{
+		scene.loadFromXml(argv[1]);
+	}
+	else
+	{
+		std::cerr << "No scene file provided" << std::endl;
+		return 1;
+	}
 
 	//world
 	scene_list world = hittableListFromScene(scene);

@@ -1,0 +1,73 @@
+<Scene>
+    <MaxRecursionDepth>3</MaxRecursionDepth>
+    <BackgroundColor>0 0 0</BackgroundColor>
+
+    <Cameras>
+        <Camera id="1" type="lookAt">
+            <Position>300 -300 100</Position>
+            <GazePoint>0 0 -50</GazePoint>
+            <FovY>45</FovY>
+            <Up>-1 1 0</Up>
+            <NearDistance>1</NearDistance>
+            <ImageResolution>1024 1024</ImageResolution>
+            <ImageName>lobster.png</ImageName>
+        </Camera>
+    </Cameras>
+
+    <Lights>
+        <AmbientLight>140 140 140</AmbientLight>
+        <PointLight id="1">
+            <Position>0 -150 120</Position>
+            <Intensity>3e6 3e6 3e6</Intensity>
+        </PointLight>
+        <PointLight id="2">
+            <Position>0 150 120</Position>
+            <Intensity>3e6 3e6 3e6</Intensity>
+        </PointLight>
+        <PointLight id="3">
+            <Position>-150 0 120</Position>
+            <Intensity>3e6 3e6 3e6</Intensity>
+        </PointLight>
+        <PointLight id="4">
+            <Position>150 0 120</Position>
+            <Intensity>3e6 3e6 3e6</Intensity>
+        </PointLight>
+    </Lights>
+
+    <Materials>
+        <Material id="1">
+            <AmbientReflectance>0.16 0.0345098 0.01882353</AmbientReflectance>
+            <DiffuseReflectance>0.64 0.13803922 0.07529412</DiffuseReflectance>
+            <SpecularReflectance>0.16 0.0345098 0.01882353</SpecularReflectance>
+            <PhongExponent>3</PhongExponent>
+        </Material>
+        <Material id="2" type="mirror">
+            <AmbientReflectance>0 0 0</AmbientReflectance>
+            <DiffuseReflectance>0.5 0.5 1.5</DiffuseReflectance>
+            <SpecularReflectance>0 0 0</SpecularReflectance>
+            <PhongExponent>1</PhongExponent>
+            <MirrorReflectance>0.5 0.5 0.5</MirrorReflectance>
+        </Material>
+    </Materials>
+
+    <VertexData>
+        -2000 3000 -69.81
+        2000 3000 -69.81
+        2000 -3000 -69.81
+        -2000 -3000 -69.81
+    </VertexData>
+
+    <Objects>
+        <Mesh id="1" shadingMode="smooth">
+            <Material>1</Material>
+            <Faces plyFile="lobster.ply" />
+        </Mesh>
+        <Mesh id="2">
+            <Material>2</Material>
+            <Faces>
+                1 4 2
+                2 4 3
+            </Faces>
+        </Mesh>
+    </Objects>
+</Scene>
