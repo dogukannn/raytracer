@@ -11,6 +11,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 file(GLOB_RECURSE SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/*.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/Include/*.h
 )
 
