@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <cassert>
 #include "Include/happly.h"
+#include <cmath>
 
 void parser::Scene::loadFromXml(const std::string &filepath)
 {
@@ -15,6 +16,16 @@ void parser::Scene::loadFromXml(const std::string &filepath)
     {
         throw std::runtime_error("Error: The xml file cannot be loaded.");
     }
+
+    //get directory of the file
+	std::string directory;
+	auto pos = filepath.find_last_of('/');
+	if (pos == std::string::npos)
+		pos = filepath.find_last_of('\\');
+	if (pos != std::string::npos)
+	{
+		directory = filepath.substr(0, pos + 1);
+	}
 
     auto root = file.FirstChild();
     if (!root)
@@ -64,18 +75,6 @@ void parser::Scene::loadFromXml(const std::string &filepath)
     Camera camera;
     while (element)
     {
-        //add parser for the camera type below
-		//<Camera id="1" type="lookAt">
-		//<Position>300 -300 100</Position>
-		//<GazePoint>0 0 -50</GazePoint>
-		//<FovY>45</FovY>
-		//<Up>-1 1 0</Up>
-		//<NearDistance>1</NearDistance>
-		//<ImageResolution>1024 1024</ImageResolution>
-		//<ImageName>lobster.png</ImageName>
-		//</Camera>
-
-
         auto is_lookat= (element->Attribute("type", "lookAt") != NULL);
 
         if (is_lookat)
@@ -284,6 +283,8 @@ void parser::Scene::loadFromXml(const std::string &filepath)
         {
 			mesh_offset = vertex_data.size();
 	        std::string plyFilePath = plyFile;
+			//add directory to the file path
+			plyFilePath = directory + plyFilePath;
 
 			// Construct the data object by reading from file
 			happly::PLYData plyIn(plyFilePath);

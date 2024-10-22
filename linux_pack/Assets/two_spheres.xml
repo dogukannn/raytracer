@@ -1,0 +1,60 @@
+<Scene>
+    <BackgroundColor>0 0 0</BackgroundColor>
+
+    <ShadowRayEpsilon>1e-3</ShadowRayEpsilon>
+
+    <IntersectionTestEpsilon>1e-6</IntersectionTestEpsilon>
+
+    <Cameras>
+        <Camera id="1">
+            <Position>0 0 4</Position>
+            <Gaze>0 0 -1</Gaze>
+            <Up>0 1 0</Up>
+            <NearPlane>-1 1 -1 1</NearPlane>
+            <NearDistance>1</NearDistance>
+            <ImageResolution>800 800</ImageResolution>
+            <ImageName>two_spheres.png</ImageName>
+        </Camera>
+    </Cameras>
+
+    <Lights>
+        <AmbientLight>20 20 20</AmbientLight>
+        <PointLight id="1">
+            <Position>5 5 5</Position>
+            <Intensity>25550 25550 25550</Intensity>
+        </PointLight>
+    </Lights>
+
+    <Materials>
+        <Material id="1">
+            <AmbientReflectance>1 1 1</AmbientReflectance>
+            <DiffuseReflectance>1 0.2 0.2</DiffuseReflectance>
+            <SpecularReflectance>1 1 1</SpecularReflectance>
+            <PhongExponent>30</PhongExponent>
+        </Material>
+        <Material id="2">
+            <AmbientReflectance>1 1 1</AmbientReflectance>
+            <DiffuseReflectance>0.2 0.2 1.0</DiffuseReflectance>
+            <SpecularReflectance>1 1 1</SpecularReflectance>
+            <PhongExponent>30</PhongExponent>
+        </Material>
+    </Materials>
+
+    <VertexData>
+        0 0 0
+        1 1 1
+    </VertexData>
+
+    <Objects>
+        <Sphere id="1">
+            <Material>1</Material>
+            <Center>1</Center>
+            <Radius>1.0</Radius>
+        </Sphere>
+        <Sphere id="1">
+            <Material>2</Material>
+            <Center>2</Center>
+            <Radius>0.4</Radius>
+        </Sphere>
+    </Objects>
+</Scene>

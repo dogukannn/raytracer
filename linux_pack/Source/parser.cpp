@@ -3,6 +3,8 @@
 #include <sstream>
 #include <stdexcept>
 #include <cassert>
+#include "Include/happly.h"
+#include <cmath>
 
 void parser::Scene::loadFromXml(const std::string &filepath)
 {
@@ -14,6 +16,16 @@ void parser::Scene::loadFromXml(const std::string &filepath)
     {
         throw std::runtime_error("Error: The xml file cannot be loaded.");
     }
+
+    //get directory of the file
+	std::string directory;
+	auto pos = filepath.find_last_of('/');
+	if (pos == std::string::npos)
+		pos = filepath.find_last_of('\\');
+	if (pos != std::string::npos)
+	{
+		directory = filepath.substr(0, pos + 1);
+	}
 
     auto root = file.FirstChild();
     if (!root)
@@ -63,31 +75,87 @@ void parser::Scene::loadFromXml(const std::string &filepath)
     Camera camera;
     while (element)
     {
-        auto child = element->FirstChildElement("Position");
-        stream << child->GetText() << std::endl;
-        child = element->FirstChildElement("Gaze");
-        stream << child->GetText() << std::endl;
-        child = element->FirstChildElement("Up");
-        stream << child->GetText() << std::endl;
-        child = element->FirstChildElement("NearPlane");
-        stream << child->GetText() << std::endl;
-        child = element->FirstChildElement("NearDistance");
-        stream << child->GetText() << std::endl;
-        child = element->FirstChildElement("ImageResolution");
-        stream << child->GetText() << std::endl;
-        child = element->FirstChildElement("ImageName");
-        stream << child->GetText() << std::endl;
+        auto is_lookat= (element->Attribute("type", "lookAt") != NULL);
 
-        stream >> camera.position.x >> camera.position.y >> camera.position.z;
-        stream >> camera.gaze.x >> camera.gaze.y >> camera.gaze.z;
-        stream >> camera.up.x >> camera.up.y >> camera.up.z;
-        stream >> camera.near_plane.x >> camera.near_plane.y >> camera.near_plane.z >> camera.near_plane.w;
-        stream >> camera.near_distance;
-        stream >> camera.image_width >> camera.image_height;
-        stream >> camera.image_name;
+        if (is_lookat)
+        {
+            Vec3f pos;
+            Vec3f gaze_point;
+            Vec3f up;
+			float fov_y;
+			float near_distance;
+			int image_width;
+			int image_height;
+			std::string image_name;
 
-        cameras.push_back(camera);
-        element = element->NextSiblingElement("Camera");
+			auto child = element->FirstChildElement("Position");
+			stream << child->GetText() << std::endl;
+			child = element->FirstChildElement("GazePoint");
+			stream << child->GetText() << std::endl;
+			child = element->FirstChildElement("FovY");
+			stream << child->GetText() << std::endl;
+			child = element->FirstChildElement("Up");
+			stream << child->GetText() << std::endl;
+			child = element->FirstChildElement("NearDistance");
+			stream << child->GetText() << std::endl;
+			child = element->FirstChildElement("ImageResolution");
+			stream << child->GetText() << std::endl;
+			child = element->FirstChildElement("ImageName");
+			stream << child->GetText() << std::endl;
+
+			stream >> pos.x >> pos.y >> pos.z;
+			stream >> gaze_point.x >> gaze_point.y >> gaze_point.z;
+			stream >> fov_y;
+			stream >> up.x >> up.y >> up.z;
+			stream >> near_distance;
+			stream >> image_width >> image_height;
+			stream >> image_name;
+
+			camera.position = pos;
+            camera.gaze = Vec3f{ gaze_point.x - pos.x, gaze_point.y - pos.y, gaze_point.z - pos.z };
+			camera.up = up;
+			float aspect_ratio = (float)image_width / image_height;
+			float t = near_distance * tan(fov_y / 2);
+			float b = -t;
+			float r = t * aspect_ratio;
+			float l = -r;
+			camera.near_plane = Vec4f{ l, r, b, t };
+			camera.image_width = image_width;
+			camera.image_height = image_height;
+			camera.image_name = image_name;
+			camera.near_distance = near_distance;
+
+			cameras.push_back(camera);
+        }
+        else
+        {
+			auto child = element->FirstChildElement("Position");
+			stream << child->GetText() << std::endl;
+			child = element->FirstChildElement("Gaze");
+			stream << child->GetText() << std::endl;
+			child = element->FirstChildElement("Up");
+			stream << child->GetText() << std::endl;
+			child = element->FirstChildElement("NearPlane");
+			stream << child->GetText() << std::endl;
+			child = element->FirstChildElement("NearDistance");
+			stream << child->GetText() << std::endl;
+			child = element->FirstChildElement("ImageResolution");
+			stream << child->GetText() << std::endl;
+			child = element->FirstChildElement("ImageName");
+			stream << child->GetText() << std::endl;
+
+			stream >> camera.position.x >> camera.position.y >> camera.position.z;
+			stream >> camera.gaze.x >> camera.gaze.y >> camera.gaze.z;
+			stream >> camera.up.x >> camera.up.y >> camera.up.z;
+			stream >> camera.near_plane.x >> camera.near_plane.y >> camera.near_plane.z >> camera.near_plane.w;
+			stream >> camera.near_distance;
+			stream >> camera.image_width >> camera.image_height;
+			stream >> camera.image_name;
+
+			cameras.push_back(camera);
+        }
+
+		element = element->NextSiblingElement("Camera");
     }
 
     //Get Lights
@@ -196,10 +264,12 @@ void parser::Scene::loadFromXml(const std::string &filepath)
     }
     stream.clear();
 
+
     //Get Meshes
     element = root->FirstChildElement("Objects");
     element = element->FirstChildElement("Mesh");
     Mesh mesh;
+    auto mesh_offset = 0;
     while (element)
     {
         child = element->FirstChildElement("Material");
@@ -207,14 +277,47 @@ void parser::Scene::loadFromXml(const std::string &filepath)
         stream >> mesh.material_id;
 
         child = element->FirstChildElement("Faces");
-        stream << child->GetText() << std::endl;
-        Face face;
-        while (!(stream >> face.v0_id).eof())
+
+        auto plyFile = (child->Attribute("plyFile"));
+        if (plyFile)
         {
-            stream >> face.v1_id >> face.v2_id;
-            mesh.faces.push_back(face);
+			mesh_offset = vertex_data.size();
+	        std::string plyFilePath = plyFile;
+			//add directory to the file path
+			plyFilePath = directory + plyFilePath;
+
+			// Construct the data object by reading from file
+			happly::PLYData plyIn(plyFilePath);
+
+			// Get mesh-style data from the object
+			std::vector<std::array<double, 3>> vPos = plyIn.getVertexPositions();
+			std::vector<std::vector<size_t>> fInd = plyIn.getFaceIndices<size_t>();
+
+			for (auto& v : vPos)
+			{
+				vertex_data.push_back(Vec3f{ (float)v[0], (float)v[1], (float)v[2] });
+			}
+			for (auto& f : fInd)
+			{
+				Face face;
+				face.v0_id = (int)f[0] + 1 + mesh_offset;
+				face.v1_id = (int)f[1] + 1 + mesh_offset;
+				face.v2_id = (int)f[2] + 1 + mesh_offset;
+				mesh.faces.push_back(face);
+			}
+		}
+        else
+        {
+			stream << child->GetText() << std::endl;
+			Face face;
+			while (!(stream >> face.v0_id).eof())
+			{
+				stream >> face.v1_id >> face.v2_id;
+				mesh.faces.push_back(face);
+			}
+			stream.clear();
         }
-        stream.clear();
+
 
         meshes.push_back(mesh);
         mesh.faces.clear();

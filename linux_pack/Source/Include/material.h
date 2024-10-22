@@ -40,7 +40,7 @@ struct material
 			//shadow_ray.orig += shadow_ray.direction() * 0.0001;
 
 			hitRecord srec;
-			if (scene.hit(shadow_ray, 0.01, 1.0, srec))
+			if (scene.hit(shadow_ray, 0.001, 1.0, srec))
 			{
 				continue;
 			}
