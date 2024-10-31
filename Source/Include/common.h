@@ -23,6 +23,17 @@ inline double randomDouble(double min, double max)
 	return min + (max - min) * randomDouble();
 }
 
+
+inline double randomFloat()
+{
+	return rand() / (RAND_MAX + 1.0f);
+}
+
+inline double randomFloat(float min, float max)
+{
+	return min + (max - min) * randomFloat();
+}
+
 inline double clamp(double x, double min, double max)
 {
 	if (x < min) return min;

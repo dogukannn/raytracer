@@ -3,6 +3,8 @@
 #include <cmath>
 #include <iostream>
 
+#include "common.h"
+
 struct vec3i
 {
 	int e[3];
@@ -49,18 +51,19 @@ struct vec3i
 
 struct vec3
 {
-	double e[3];
+	float e[3];
 
 	vec3() : e{0,0,0} {} 
-	vec3(double e0, double e1, double e2) : e{e0, e1, e2} {}
+	vec3(float e0, float e1, float e2) : e{e0, e1, e2} {}
+	vec3(float e0) : e{e0, e0, e0} {}
 
-	double x() const { return e[0]; }
-	double y() const { return e[1]; }
-	double z() const { return e[2]; }
+	float x() const { return e[0]; }
+	float y() const { return e[1]; }
+	float z() const { return e[2]; }
 
 	vec3 operator-() const { return vec3(-e[0], -e[1], -e[2]); }
-	double operator[](int i) const { return e[i]; }
-	double& operator[](int i) { return e[i]; }
+	float operator[](int i) const { return e[i]; }
+	float& operator[](int i) { return e[i]; }
 
 	vec3& operator+=(const vec3& v)
 	{
@@ -70,7 +73,7 @@ struct vec3
 		return *this;
 	}
 
-	vec3& operator*=(const double t)
+	vec3& operator*=(const float t)
 	{
 		e[0] *= t;
 		e[1] *= t;
@@ -78,29 +81,29 @@ struct vec3
 		return *this;
 	}
 
-	vec3& operator/=(const double t)
+	vec3& operator/=(const float t)
 	{
 		return *this *= 1 / t;
 	}
 
-	double length() const
+	float length() const
 	{
 		return std::sqrt(lengthSquared());
 	}
 
-	double lengthSquared() const
+	float lengthSquared() const
 	{
 		return e[0]*e[0] + e[1]*e[1] + e[2]*e[2];
 	}
 
 	inline static vec3 random()
 	{
-		return vec3(randomDouble(), randomDouble(), randomDouble());
+		return vec3(randomFloat(), randomFloat(), randomFloat());
 	}
 
-	inline static vec3 random(double min, double max)
+	inline static vec3 random(float min, float max)
 	{
-		return vec3(randomDouble(min, max), randomDouble(min, max), randomDouble(min, max));
+		return vec3(randomFloat(min, max), randomFloat(min, max), randomFloat(min, max));
 	}
 
 	bool nearZero() const
@@ -135,17 +138,17 @@ inline vec3 operator*(const vec3 &u, const vec3 &v)
 	return vec3(u.e[0] * v.e[0], u.e[1] * v.e[1], u.e[2] * v.e[2]);
 }
 
-inline vec3 operator*(double t, const vec3 &v)
+inline vec3 operator*(float t, const vec3 &v)
 {
 	return vec3(t * v.e[0], t * v.e[1], t * v.e[2]);
 }
 
-inline vec3 operator*(const vec3 &v, double t)
+inline vec3 operator*(const vec3 &v, float t)
 {
 	return t * v;
 }
 
-inline vec3 operator/(const vec3 &v, double t)
+inline vec3 operator/(const vec3 &v, float t)
 {
 	return ( 1 / t ) * v;
 }
@@ -169,7 +172,7 @@ inline vec3 unit(vec3 v)
 	return v / v.length();
 }
 
-vec3 randomInUnitSphere()
+inline vec3 randomInUnitSphere()
 {
 	while (true)
 	{
@@ -179,12 +182,12 @@ vec3 randomInUnitSphere()
 	}
 }
 
-vec3 randomUnitVector()
+inline vec3 randomUnitVector()
 {
 	return unit(randomInUnitSphere());
 }
 
-vec3 randomInUnitDisk()
+inline vec3 randomInUnitDisk()
 {
 	while (true)
 	{
@@ -194,17 +197,27 @@ vec3 randomInUnitDisk()
 	}
 }
 
-vec3 reflect(const vec3 &v, const vec3 &n)
+inline vec3 reflect(const vec3 &v, const vec3 &n)
 {
 	return v - 2 * dot(v, n) * n;
 }
 
-vec3 refract(const vec3 &uv, const vec3 &n, double etaiOverEtat)
+inline vec3 refract(const vec3 &uv, const vec3 &n, double etaiOverEtat)
 {
 	auto cosTheta = fmin(dot(-uv, n), 1.0);
 	vec3 rOutPerp = etaiOverEtat * (uv + cosTheta * n);
 	vec3 rOutParallel = -sqrt(fabs(1.0 - rOutPerp.lengthSquared())) * n;
 	return rOutPerp + rOutParallel;
+}
+
+inline vec3 fmin(vec3 a, vec3 b)
+{
+	return vec3(fmin(a[0], b[0]), fmin(a[1], b[1]), fmin(a[2], b[2]));
+}
+
+inline vec3 fmax(vec3 a, vec3 b)
+{
+	return vec3(fmax(a[0], b[0]), fmax(a[1], b[1]), fmax(a[2], b[2]));
 }
 
 

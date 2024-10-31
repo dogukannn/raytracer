@@ -1,3 +1,5 @@
+#pragma once
+
 #include "common.h"
 
 struct point_light

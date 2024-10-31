@@ -16,6 +16,7 @@
 
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "Include/bvh.h"
 #include "Include/stb_image_write.h"
 
 color beerslaw(double t, color absorp)
@@ -131,7 +132,7 @@ color RayColor(const ray& r, const scene_list& world, const camera& cam, int dep
 
 color to_c(parser::Vec3i v)
 {
-	return { (double)v.x, (double)v.y, (double)v.z };
+	return { (float)v.x, (float)v.y, (float)v.z };
 }
 
 color to_c(parser::Vec3f v)
@@ -177,6 +178,8 @@ scene_list hittableListFromScene(const parser::Scene& scene)
 {
 	scene_list world;
 
+	std::vector<triangle> triangles;
+
 	for(auto& mesh : scene.meshes)
 	{
 		auto& mat = scene.materials[mesh.material_id-1];
@@ -197,7 +200,17 @@ scene_list hittableListFromScene(const parser::Scene& scene)
 							scene.vertex_data[face.v2_id-1].y,
 							scene.vertex_data[face.v2_id-1].z };
 
-			world.add(std::make_shared<triangle>(p1, p2, p3, mesh_material));
+
+			triangle t(p1, p2, p3, mesh_material);
+			triangles.push_back(t);
+			//world.add(std::make_shared<triangle>(p1, p2, p3, mesh_material));
+		}
+
+		{
+			//build bvh
+			auto bvh = std::make_shared<BVH>();
+			bvh->build(std::move(triangles));
+			world.add(bvh);
 		}
 	}
 
@@ -210,6 +223,7 @@ scene_list hittableListFromScene(const parser::Scene& scene)
 
 		world.add(std::make_shared<sphere>(c, sp.radius, mesh_material));
 	}
+
 
 	for(auto& tr : scene.triangles)
 	{
@@ -227,9 +241,19 @@ scene_list hittableListFromScene(const parser::Scene& scene)
 
 		auto& mat = scene.materials[tr.material_id-1];
 		std::shared_ptr<material> mesh_material = convert_material(mat);
-		world.add(std::make_shared<triangle>(p1, p2, p3, mesh_material));
+		triangle t(p1, p2, p3, mesh_material);
+		triangles.push_back(t);
+		//world.add(std::make_shared<triangle>(p1, p2, p3, mesh_material));
 	}
-	
+
+	if(triangles.size() > 0)
+	{
+		//build bvh
+		auto bvh = std::make_shared<BVH>();
+		bvh->build(std::move(triangles));
+		world.add(bvh);
+	}
+
 
 	world.ambient_light = to_c(scene.ambient_light);
 	for(auto& pl : scene.point_lights)

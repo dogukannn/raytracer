@@ -10,6 +10,7 @@ struct triangle : public hittable
 	point3 p2;
 	point3 p3;
 	vec3 normal;
+    vec3 centroid;
 	std::shared_ptr<material> mat_ptr;
 
 	triangle() = default;

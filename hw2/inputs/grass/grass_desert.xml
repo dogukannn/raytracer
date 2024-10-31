@@ -1,0 +1,140 @@
+<Scene>
+    <BackgroundColor>12 12 12</BackgroundColor>
+    <ShadowRayEpsilon>1e-3</ShadowRayEpsilon>
+    <MaxRecursionDepth>6</MaxRecursionDepth>
+    <Cameras>
+        <Camera id="1">
+            <Position>-367.6364440917969 0.3481903076171875 162.9002685546875</Position>
+            <Gaze>0.9289994239807129 -0.10420501232147217 -0.3551076054573059</Gaze>
+            <Up>0.3528946042060852 -0.0395832359790802 0.9348254203796387</Up>
+            <NearPlane>-1 1 -0.5625 0.5625</NearPlane>
+            <NearDistance>3</NearDistance>
+            <ImageResolution>1920 1080</ImageResolution>
+            <ImageName>grass_desert.png</ImageName>
+        </Camera></Cameras>
+    <Lights>
+        <AmbientLight>40 55 0</AmbientLight>
+        <PointLight id="1">
+            <Position>40.076245307922363 -1.0054539442062378 20.035270690917969</Position>
+            <Intensity>50000.0 50000.0 50000.0</Intensity>
+        </PointLight>
+        <PointLight id="2">
+            <Position>40.076245307922363 -80.0054539442062378 20.035270690917969</Position>
+            <Intensity>50000.0 50000.0 50000.0</Intensity>
+        </PointLight>
+        <PointLight id="3">
+            <Position>40.076245307922363 -120.0054539442062378 20.035270690917969</Position>
+            <Intensity>50000.0 50000.0 50000.0</Intensity>
+        </PointLight>
+        <PointLight id="4">
+            <Position>40.076245307922363 40.0054539442062378 20.035270690917969</Position>
+            <Intensity>50000.0 50000.0 50000.0</Intensity>
+        </PointLight>
+        <PointLight id="5">
+            <Position>40.076245307922363 80.0054539442062378 20.035270690917969</Position>
+            <Intensity>50000.0 50000.0 50000.0</Intensity>
+        </PointLight>
+    </Lights>
+    <Materials>
+        <Material id="1">
+            <AmbientReflectance>1 1 1</AmbientReflectance>
+            <DiffuseReflectance>0.0038999998942017555 0.30979999899864197 0.0</DiffuseReflectance>
+            <SpecularReflectance>0.0 0.0 0.0</SpecularReflectance>
+            <MirrorReflectance>0.10540926456451416 0.10540926456451416 0.10540926456451416</MirrorReflectance>
+            <PhongExponent>1</PhongExponent>
+        </Material>
+        <Material id="2" type="mirror">
+            <AmbientReflectance>1 1 1</AmbientReflectance>
+            <DiffuseReflectance>0.40389999747276306 0.5529000163078308 0.0038999998942017555</DiffuseReflectance>
+            <SpecularReflectance>0.40389999747276306 0.5529000163078308 0.0038999998942017555</SpecularReflectance>
+            <MirrorReflectance>0.10540926456451416 0.10540926456451416 0.10540926456451416</MirrorReflectance>
+            <PhongExponent>1000</PhongExponent>
+        </Material>
+        <Material id="3">
+            <AmbientReflectance>0.5 0.5 0.5</AmbientReflectance>
+            <DiffuseReflectance>0.82 0.61 0.298</DiffuseReflectance>
+            <SpecularReflectance>0.0 0.0 0.0</SpecularReflectance>
+            <MirrorReflectance>0 0 0</MirrorReflectance>
+            <PhongExponent>1</PhongExponent>
+        </Material>
+        <Material id="4">
+            <AmbientReflectance>1 1 1</AmbientReflectance>
+            <DiffuseReflectance>0.800000011920929 0.800000011920929 0.800000011920929</DiffuseReflectance>
+            <SpecularReflectance>0.5 0.5 0.5</SpecularReflectance>
+            <MirrorReflectance>0.5999999940395355 0.5999999940395355 0.5999999940395355</MirrorReflectance>
+            <PhongExponent>1</PhongExponent>
+        </Material>
+    </Materials>
+    <VertexData>
+        -1 -1 0
+        1 -1 0
+        1 1 0
+        -1 1 0
+    </VertexData>
+    <Transformations>
+        <Translation id="1">10 -10 0</Translation>
+        <Translation id="2">-10 -30 0</Translation>
+        <Rotation id="1">10 0 0 1</Rotation>
+        <Rotation id="2">-10 0 0 1</Rotation>
+        <Scaling id="1">10000 10000 1</Scaling>
+        <Translation id="3">0 20 0</Translation>
+    </Transformations>
+    <Objects>
+        <Mesh id="1">
+            <Material>2</Material>
+            <Faces plyFile="grass_ply_ply/mesh_1.ply" />
+        </Mesh>
+        <MeshInstance id="2" baseMeshId="1">
+            <Material>2</Material>
+            <Transformations>t1</Transformations>
+        </MeshInstance>
+        <MeshInstance id="3" baseMeshId="1">
+            <Material>2</Material>
+            <Transformations>t2</Transformations>
+        </MeshInstance>
+        <MeshInstance id="4" baseMeshId="2">
+            <Material>2</Material>
+            <Transformations>t1</Transformations>
+        </MeshInstance>
+        <MeshInstance id="5" baseMeshId="4" resetTransform="true">
+            <Material>2</Material>
+            <Transformations>r1</Transformations>
+        </MeshInstance>
+        <MeshInstance id="6" baseMeshId="5" resetTransform="true">
+            <Material>2</Material>
+            <Transformations>r2</Transformations>
+        </MeshInstance>
+        <MeshInstance id="7" baseMeshId="1">
+            <Transformations>t3</Transformations>
+            <Material>2</Material>
+        </MeshInstance>
+        <MeshInstance id="8" baseMeshId="2">
+            <Material>2</Material>
+            <Transformations>t3</Transformations>
+        </MeshInstance>
+        <MeshInstance id="9" baseMeshId="3">
+            <Material>2</Material>
+            <Transformations>t3</Transformations>
+        </MeshInstance>
+        <MeshInstance id="10" baseMeshId="4">
+            <Material>2</Material>
+            <Transformations>t3</Transformations>
+        </MeshInstance>
+        <MeshInstance id="11" baseMeshId="5">
+            <Material>2</Material>
+            <Transformations>t3</Transformations>
+        </MeshInstance>
+        <MeshInstance id="12" baseMeshId="6">
+            <Material>2</Material>
+            <Transformations>t3</Transformations>
+        </MeshInstance>
+        <Mesh id="13">
+            <Material>3</Material>
+            <Transformations>s1</Transformations>
+            <Faces>
+                1 2 3 
+                1 3 4
+            </Faces>
+        </Mesh>
+    </Objects>
+</Scene>
