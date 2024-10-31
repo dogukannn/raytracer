@@ -36,11 +36,13 @@ struct material
 		for(auto& light : scene.point_lights)
 		{
 
-			auto shadow_ray = ray(rec.p, (light->position - rec.p));
-			//shadow_ray.orig += shadow_ray.direction() * 0.0001;
+			auto shadow_ray = ray(rec.p + rec.normal * 0.001, unit(light->position - rec.p + rec.normal * 0.001));
+			//shadow_ray.orig += rec.normal * 0.001;
+
+			//shadow_ray.dir = unit(shadow_ray.dir);
 
 			hitRecord srec;
-			if (scene.hit(shadow_ray, 0.001, 1.0, srec))
+			if (scene.hit(shadow_ray, 0.0001, (light->position - rec.p + rec.normal * 0.001).length(), srec))
 			{
 				continue;
 			}

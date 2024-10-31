@@ -5,23 +5,43 @@
 bool hitAABB(const ray& r, const vec3& bmin, const vec3& bmax)
 {
 	// Slab method
-	float tx1 = (bmin.x() - r.origin().x()) * -r.direction().x();
-	float tx2 = (bmax.x() - r.origin().x()) * -r.direction().x();
-	float tmin = fmin(tx1, tx2);
-	float tmax = fmax(tx1, tx2);
+	double tmin = (bmin.x() - r.orig.x()) / r.dir.x();
+	double tmax = (bmax.x() - r.orig.x()) / r.dir.x();
 
-	float ty1 = (bmin.y() - r.origin().y()) * -r.direction().y();
-	float ty2 = (bmax.y() - r.origin().y()) * -r.direction().y();
-	tmin = fmax(tmin, fmin(ty1, ty2));
-	tmax = fmin(tmax, fmax(ty1, ty2));
+	if (tmin > tmax)
+		std::swap(tmin, tmax);
 
-	float tz1 = (bmin.z() - r.origin().z()) * -r.direction().z();
-	float tz2 = (bmax.z() - r.origin().z()) * -r.direction().z();
-	tmin = fmax(tmin, fmin(tz1, tz2));
-	tmax = fmin(tmax, fmax(tz1, tz2));
+	double tymin = (bmin.y() - r.orig.y()) / r.dir.y();
+	double tymax = (bmax.y() - r.orig.y()) / r.dir.y();
 
-	return tmax >= tmin && tmax > 0;
+	if (tymin > tymax)
+		std::swap(tymin, tymax);
 
+	if ((tmin > tymax) || (tymin > tmax))
+		return false;
+
+	if (tymin > tmin)
+		tmin = tymin;
+
+	if (tymax < tmax)
+		tmax = tymax;
+
+	double tzmin = (bmin.z() - r.orig.z()) / r.dir.z();
+	double tzmax = (bmax.z() - r.orig.z()) / r.dir.z();
+
+	if (tzmin > tzmax)
+		std::swap(tzmin, tzmax);
+
+	if ((tmin > tzmax) || (tzmin > tmax))
+		return false;
+
+	if (tzmin > tmin)
+		tmin = tzmin;
+
+	if (tzmax < tmax)
+		tmax = tzmax;
+
+	return true;
 }
 
 bool BVH::hit(const ray& r, double tMin, double tMax, hitRecord& rec) const

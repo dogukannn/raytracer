@@ -296,11 +296,11 @@ void render_camera(parser::Scene& scene, int camera_idx, scene_list& world)
 
 	//{
 	//	color pixelColor(0, 0, 0);
-	//	const auto u = (751 + 0.5f) / (imageWidth - 1);
-	//	const auto v = (720 - 454 + 0.5f) / (imageHeight - 1);
+	//	const auto u = (475 + 0.5f) / (imageWidth - 1);
+	//	const auto v = (800 - 267 + 0.5f) / (imageHeight - 1);
 	//	ray r = cam.getRay(u, v);
 	//	pixelColor += RayColor(r, world, cam, maxDepth);
-	//return;
+	//	return;
 	//}
 
 
