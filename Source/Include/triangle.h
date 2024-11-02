@@ -206,6 +206,8 @@ inline bool triangle::hit(const ray& r, double tMin, double tMax, hitRecord& rec
     else
 		rec.p = P;
     rec.setFaceNormal(r, normal);
+    if(model)
+		rec.normal = unit(to_vec3(model->inverse().transpose() * vec4(rec.normal, 0.0f)));
     rec.mat_ptr = mat_ptr;
     
     return true;

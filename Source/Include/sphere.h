@@ -44,7 +44,8 @@ inline bool sphere::hit(const ray& r, double tMin, double tMax, hitRecord& rec, 
 
 	vec3 outwardNormal = (r.at(rec.t) - center) / radius;
 	rec.setFaceNormal(r, outwardNormal);
-	rec.normal = unit(to_vec3(model->inverse().transpose() * vec4(rec.normal, 0.0f)));
+	if (model)
+		rec.normal = unit(to_vec3(model->inverse().transpose() * vec4(rec.normal, 0.0f)));
 	rec.mat_ptr = mat_ptr;
 
 	return true;

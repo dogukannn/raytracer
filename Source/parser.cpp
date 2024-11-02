@@ -6,6 +6,8 @@
 #include "Include/happly.h"
 #include <cmath>
 
+#include "Include/common.h"
+
 void parser::Scene::loadFromXml(const std::string &filepath)
 {
     tinyxml2::XMLDocument file;
@@ -115,7 +117,7 @@ void parser::Scene::loadFromXml(const std::string &filepath)
             camera.gaze = Vec3f{ gaze_point.x - pos.x, gaze_point.y - pos.y, gaze_point.z - pos.z };
 			camera.up = up;
 			float aspect_ratio = (float)image_width / image_height;
-			float t = near_distance * tan(fov_y / 2);
+			float t = near_distance * tan(degreesToRadians(fov_y) / 2.0f);
 			float b = -t;
 			float r = t * aspect_ratio;
 			float l = -r;
