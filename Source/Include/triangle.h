@@ -16,9 +16,16 @@ struct triangle : public hittable
 	std::shared_ptr<material> mat_ptr;
 
 	triangle() = default;
-	triangle(const point3& p1, const point3& p2, const point3& p3, std::shared_ptr<material> m) :  p1(p1), p2(p2), p3(p3), mat_ptr(m) {}
+	triangle(const point3& p1, const point3& p2, const point3& p3, std::shared_ptr<material> m) :  p1(p1), p2(p2), p3(p3), mat_ptr(m)
+	{
+		vec3 v0v1 = p2 - p1;
+		vec3 v0v2 = p3 - p1;
+		normal = cross(v0v1, v0v2);
 
-	bool hit(const ray& r, double tMin, double tMax, hitRecord& rec) const override;
+		normal = unit(normal);
+	}
+
+	bool hit(const ray& r, double tMin, double tMax, hitRecord& rec, mat4* model) const override;
 };
 
 
@@ -75,63 +82,134 @@ struct triangle : public hittable
 //    return true;
 //}
 
-inline bool triangle::hit(const ray& r, double tMin, double tMax, hitRecord& rec) const {
-    //assert(r.direction().length() < 1.001 && r.direction().length() > 0.99); // Ensure the ray direction is normalized
+//inline bool triangle::hit(const ray& r, double tMin, double tMax, hitRecord& rec) const {
+//    //assert(r.direction().length() < 1.001 && r.direction().length() > 0.99); // Ensure the ray direction is normalized
+//
+//    const vec3& v0 = p1;
+//    const vec3& v1 = p2;
+//    const vec3& v2 = p3;
+//
+//    // Compute the barycentric coordinates (u, v)
+//    vec3 v0v1 = v1 - v0;
+//    vec3 v0v2 = v2 - v0;
+//    vec3 pvec = cross(r.direction(), v0v2);
+//    double det = dot(v0v1, pvec);
+//
+//    //backface cull
+//	//if (det < 1e-8) return false;
+//
+//
+//    // Ray is parallel to the triangle plane
+//    if (fabs(det) < 1e-8)
+//    {
+//        return false;
+//    }
+//
+//    double invDet = 1.0 / det;
+//    vec3 tvec = r.origin() - v0;
+//    double u = dot(tvec, pvec) * invDet;
+//    if (u < -0.01 || u > 1)
+//    {
+//        return false;
+//    }
+//
+//    vec3 qvec = cross(tvec, v0v1);
+//    double v = dot(r.direction(), qvec) * invDet;
+//    if (v < -0.01 || u + v > 1)
+//    {
+//        return false;
+//    }
+//
+//    // Calculate the distance t along the ray to the intersection point
+//    double t = dot(v0v2, qvec) * invDet;
+//
+//    if (t < tMin || t > tMax)
+//    {
+//        return false;
+//    }
+//
+//    // Update the hit record
+//    rec.t = t;
+//    rec.p = r.at(t);
+//    vec3 outwardNormal = unit(cross(v0v1, v0v2)); 
+//    rec.setFaceNormal(r, outwardNormal);
+//    rec.mat_ptr = mat_ptr;
+//
+//    return true;
+//}
 
+
+//best results
+inline bool triangle::hit(const ray& r, double tMin, double tMax, hitRecord& rec, mat4* model) const {
     const vec3& v0 = p1;
     const vec3& v1 = p2;
     const vec3& v2 = p3;
 
-    // Compute the barycentric coordinates (u, v)
-    vec3 v0v1 = v1 - v0;
-    vec3 v0v2 = v2 - v0;
-    vec3 pvec = cross(r.direction(), v0v2);
-    double det = dot(v0v1, pvec);
+    //// Compute edges and normal
+    //vec3 v0v1 = v1 - v0;
+    //vec3 v0v2 = v2 - v0;
+    //vec3 normal = cross(v0v1, v0v2);
 
-    //backface cull
-	//if (det < 1e-8) return false;
-
-
-    // Ray is parallel to the triangle plane
-    if (fabs(det) < 1e-8)
-    {
+    //n
+    
+    // Normalize the normal
+    //normal = unit(normal);
+    
+    // First compute intersection with plane
+    double NdotRayDirection = dot(normal, r.direction());
+    
+    //if (fabs(NdotRayDirection) < 1e-8) {
+    //    return false;  // Ray parallel to triangle plane
+    //}
+    
+    double d = -dot(normal, v0);
+    double t = -(dot(normal, r.origin()) + d) / NdotRayDirection;
+    
+    if (t < tMin || t > tMax) {
         return false;
     }
-
-    double invDet = 1.0 / det;
-    vec3 tvec = r.origin() - v0;
-    double u = dot(tvec, pvec) * invDet;
-    if (u < -0.01 || u > 1)
-    {
+    
+    // Intersection point
+    vec3 P = r.at(t);
+    
+    // Inside-out test
+    vec3 C;  // Vector perpendicular to triangle's plane
+    
+    // Edge 0
+    vec3 edge0 = v1 - v0;
+    vec3 vp0 = P - v0;
+    C = cross(edge0, vp0);
+    if (dot(normal, C) < -1e-10) {
         return false;
     }
-
-    vec3 qvec = cross(tvec, v0v1);
-    double v = dot(r.direction(), qvec) * invDet;
-    if (v < -0.01 || u + v > 1)
-    {
+    
+    // Edge 1
+    vec3 edge1 = v2 - v1;
+    vec3 vp1 = P - v1;
+    C = cross(edge1, vp1);
+    if (dot(normal, C) < -1e-10) {
         return false;
     }
-
-    // Calculate the distance t along the ray to the intersection point
-    double t = dot(v0v2, qvec) * invDet;
-
-    if (t < tMin || t > tMax)
-    {
+    
+    // Edge 2
+    vec3 edge2 = v0 - v2;
+    vec3 vp2 = P - v2;
+    C = cross(edge2, vp2);
+    if (dot(normal, C) < -1e-10) {
         return false;
     }
-
-    // Update the hit record
+    
+    // If we passed all tests, update hit record
     rec.t = t;
-    rec.p = r.at(t);
-    vec3 outwardNormal = unit(cross(v0v1, v0v2)); 
-    rec.setFaceNormal(r, outwardNormal);
+    if(model)
+		rec.p = to_vec3((*model * vec4(P, 1.0f)));
+    else
+		rec.p = P;
+    rec.setFaceNormal(r, normal);
     rec.mat_ptr = mat_ptr;
-
+    
     return true;
 }
-
-
 
 //inline bool triangle::hit(const ray& r, double tMin, double tMax, hitRecord& rec) const
 //{

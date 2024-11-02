@@ -43,7 +43,7 @@ struct camera
 		lensRadius = aperture / 2;
 	}
 
-	ray getRay(double s, double t) const
+	ray getRay(float s, float t) const
 	{
 		//vec3 rd = lensRadius * randomInUnitSphere();
 		//vec3 offset = u * rd.x() + v * rd.y();

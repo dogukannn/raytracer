@@ -61,15 +61,15 @@
         </Mesh>
         <Triangle id="1">
             <Material>1</Material>
-            <Transformations> r1</Transformations>
+            <Transformations>r1</Transformations>
             <Indices>
                 5 6 7
             </Indices>
         </Triangle>
         <Sphere id="1">
-            <Material> 1 </Material>
-            <Center> 8 </Center>
-            <Radius> 0.3 </Radius>
+            <Material>1</Material>
+            <Center>8</Center>
+            <Radius>0.3</Radius>
         </Sphere>
     </Objects>
 </Scene>

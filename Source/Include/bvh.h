@@ -22,7 +22,7 @@ struct BVH : public hittable
 
 	BVH() = default;
 
-	bool hit(const ray& r, double tMin, double tMax, hitRecord& rec) const override;
+	bool hit(const ray& r, double tMin, double tMax, hitRecord& rec, mat4* model) const override;
 
 	void build(std::vector<triangle>&& _triangles);
 	void UpdateNodeBounds(uint32_t nodeIdx);

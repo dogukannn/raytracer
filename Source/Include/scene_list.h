@@ -19,10 +19,10 @@ struct scene_list : public hittable
 	void clear() { objects.clear(); }
 	void add(std::shared_ptr<hittable> object) { objects.push_back(object); }
 
-	bool hit(const ray& r, double tMin, double tMax, hitRecord& rec) const override;
+	bool hit(const ray& r, double tMin, double tMax, hitRecord& rec, mat4* model) const override;
 };
 
-inline bool scene_list::hit(const ray& r, double tMin, double tMax, hitRecord& rec) const
+inline bool scene_list::hit(const ray& r, double tMin, double tMax, hitRecord& rec, mat4* model) const
 {
 	hitRecord tmpRec;
 	bool hitAnything = false;
@@ -30,7 +30,20 @@ inline bool scene_list::hit(const ray& r, double tMin, double tMax, hitRecord& r
 
 	for(auto&& object : objects)
 	{
-		if(object->hit(r, tMin, closestSoFar, tmpRec))
+		//convert ray accoring to the model matrix
+		auto invModel = object->model.inverse();
+		ray newRay = r;
+		vec4 origin = vec4(newRay.origin(), 1.0f);
+		vec4 direction = vec4(newRay.direction(), 0.0f);
+
+		vec4 newOrigin = invModel * origin;
+		vec4 newDirection = invModel * direction;
+
+		newRay = ray(vec3(newOrigin.x(), newOrigin.y(), newOrigin.z()), vec3(newDirection.x(), newDirection.y(), newDirection.z()));
+
+		//newRay.dir = unit(newRay.direction());
+
+		if(object->hit(newRay, tMin, closestSoFar, tmpRec, &object->model))
 		{
 			hitAnything = true;
 			closestSoFar = tmpRec.t;

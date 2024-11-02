@@ -264,6 +264,74 @@ void parser::Scene::loadFromXml(const std::string &filepath)
     }
     stream.clear();
 
+	//<Transformations>
+	//<Translation id="1">10 -10 0</Translation>
+	//<Translation id="2">-10 -30 0</Translation>
+	//<Rotation id="1">10 0 0 1</Rotation>
+	//<Rotation id="2">-10 0 0 1</Rotation>
+	//<Scaling id="1">10000 10000 1</Scaling>
+	//<Translation id="3">0 20 0</Translation>
+	//</Transformations>
+	//Get transformations
+
+	element = root->FirstChildElement("Transformations");
+    if(element)
+    {
+		if(auto translation = element->FirstChildElement("Translation"))
+		{
+			while(translation)
+			{
+				auto translation_id = (translation->Attribute("id"));
+				stream << translation->GetText() << std::endl;
+				Vec3f translation_vec;
+				stream >> translation_vec.x >> translation_vec.y >> translation_vec.z;
+
+				std::cout << "t" << translation_id << std::endl;
+				std::cout << translation_vec.x << " " << translation_vec.y << " " << translation_vec.z << std::endl;
+				translation = translation->NextSiblingElement("Translation");
+
+				translations["t" + std::string(translation_id)] = Translation{translation_vec};
+			}
+		}
+		//get scalings
+		if (auto scaling = element->FirstChildElement("Scaling"))
+		{
+			while(scaling)
+			{
+				auto scaling_id = (scaling->Attribute("id"));
+				stream << scaling->GetText() << std::endl;
+				Vec3f scaling_vec;
+				stream >> scaling_vec.x >> scaling_vec.y >> scaling_vec.z;
+
+				std::cout << "s" << scaling_id << std::endl;
+				std::cout << scaling_vec.x << " " << scaling_vec.y << " " << scaling_vec.z << std::endl;
+				scaling = scaling->NextSiblingElement("Scaling");
+
+				scalings["s" + std::string(scaling_id)] = Scaling{ scaling_vec };
+			}
+		}
+		//get rotations
+		if (auto rotation = element->FirstChildElement("Rotation"))
+		{
+			while (rotation)
+			{
+				auto rotation_id = (rotation->Attribute("id"));
+				stream << rotation->GetText() << std::endl;
+				float angle;
+				Vec3f axis;
+				stream >> angle >> axis.x >> axis.y >> axis.z;
+
+				std::cout << "r" << rotation_id << std::endl;
+				std::cout << angle << " " << axis.x << " " << axis.y << " " << axis.z << std::endl;
+
+				rotation = rotation->NextSiblingElement("Rotation");
+
+				rotations["r" + std::string(rotation_id)] = Rotation{ angle, axis };
+			}
+		}
+	    
+    }
+
 
     //Get Meshes
     element = root->FirstChildElement("Objects");
@@ -318,9 +386,22 @@ void parser::Scene::loadFromXml(const std::string &filepath)
 			stream.clear();
         }
 
+		auto transformations = element->FirstChildElement("Transformations");
+        if (transformations)
+        {
+			std::string transformation;
+            stream << transformations->GetText() << std::endl;
+            while (!(stream >> transformation).eof())
+            {
+                mesh.transformations.push_back(transformation);
+                transformation.clear();
+            }
+			stream.clear();
+        }
 
         meshes.push_back(mesh);
         mesh.faces.clear();
+        mesh.transformations.clear();
         element = element->NextSiblingElement("Mesh");
     }
     stream.clear();
@@ -339,7 +420,22 @@ void parser::Scene::loadFromXml(const std::string &filepath)
         stream << child->GetText() << std::endl;
         stream >> triangle.indices.v0_id >> triangle.indices.v1_id >> triangle.indices.v2_id;
 
+		auto transformations = element->FirstChildElement("Transformations");
+        if (transformations)
+        {
+			std::string transformation;
+            stream << transformations->GetText() << std::endl;
+            while (!(stream >> transformation).eof())
+            {
+                triangle.transformations.push_back(transformation);
+                transformation.clear();
+            }
+			stream.clear();
+        }
+
+
         triangles.push_back(triangle);
+        triangle.transformations.clear();
         element = element->NextSiblingElement("Triangle");
     }
 
@@ -361,7 +457,22 @@ void parser::Scene::loadFromXml(const std::string &filepath)
         stream << child->GetText() << std::endl;
         stream >> sphere.radius;
 
+		auto transformations = element->FirstChildElement("Transformations");
+        if (transformations)
+        {
+			std::string transformation;
+            stream << transformations->GetText() << std::endl;
+            while (!(stream >> transformation).eof())
+            {
+                sphere.transformations.push_back(transformation);
+                transformation.clear();
+            }
+			stream.clear();
+        }
+
+
         spheres.push_back(sphere);
         element = element->NextSiblingElement("Sphere");
+        sphere.transformations.clear();
     }
 }

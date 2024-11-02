@@ -5,8 +5,8 @@
 #include <memory>
 
 
-const double infinity = std::numeric_limits<double>::infinity();
-const double pi = 3.1415926535897932385;
+const float infinity = std::numeric_limits<float>::infinity();
+const float pi = 3.1415926535897932385f;
 
 inline double degreesToRadians(double degrees)
 {
@@ -24,12 +24,12 @@ inline double randomDouble(double min, double max)
 }
 
 
-inline double randomFloat()
+inline float randomFloat()
 {
 	return rand() / (RAND_MAX + 1.0f);
 }
 
-inline double randomFloat(float min, float max)
+inline float randomFloat(float min, float max)
 {
 	return min + (max - min) * randomFloat();
 }

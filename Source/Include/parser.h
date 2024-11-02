@@ -2,6 +2,7 @@
 #define __HW1__PARSER__
 
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace parser
@@ -68,12 +69,23 @@ namespace parser
     {
         int material_id;
         std::vector<Face> faces;
+
+		std::vector<std::string> transformations;
+    };
+
+    struct MeshInstance
+    {
+		int mesh_id;
+		bool reset_transform = false;
+		std::vector<std::string> transformations;
     };
 
     struct Triangle
     {
         int material_id;
         Face indices;
+
+		std::vector<std::string> transformations;
     };
 
     struct Sphere
@@ -81,6 +93,24 @@ namespace parser
         int material_id;
         int center_vertex_id;
         float radius;
+
+		std::vector<std::string> transformations;
+    };
+
+    struct Translation
+    {
+		Vec3f translation;
+    };
+
+    struct Scaling
+    {
+		Vec3f scaling;
+    };
+
+    struct Rotation
+    {
+		float angle;
+		Vec3f rotation;
     };
 
     struct Scene
@@ -97,6 +127,10 @@ namespace parser
         std::vector<Mesh> meshes;
         std::vector<Triangle> triangles;
         std::vector<Sphere> spheres;
+
+		std::unordered_map<std::string, Translation> translations;
+		std::unordered_map<std::string, Scaling> scalings;
+		std::unordered_map<std::string, Rotation> rotations;
 
         //Functions
         void loadFromXml(const std::string &filepath);

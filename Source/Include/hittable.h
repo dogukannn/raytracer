@@ -21,5 +21,7 @@ struct hitRecord
 
 struct hittable
 {
-	virtual bool hit(const ray& r, double tMin, double tMax, hitRecord& rec) const = 0;
+	mat4 model;
+
+	virtual bool hit(const ray& r, double tMin, double tMax, hitRecord& rec, mat4* model) const = 0;
 };

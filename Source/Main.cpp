@@ -3,6 +3,7 @@
 #include <thread>
 #include <chrono>
 #include <future>
+#include <queue>
 
 //project headers
 #include "Include/camera.h"
@@ -19,6 +20,79 @@
 #include "Include/bvh.h"
 #include "Include/stb_image_write.h"
 
+
+class ThreadPool {
+public:
+    std::vector<std::thread> workers;
+    std::queue<std::function<void()>> tasks;
+    std::mutex queue_mutex;
+    std::condition_variable task_condition;
+    std::condition_variable finished_condition;
+    std::atomic<bool> stop{false};
+    std::atomic<size_t> active_tasks{0};
+
+public:
+    ThreadPool(size_t threads) {
+        for(size_t i = 0; i < threads; ++i) {
+            workers.emplace_back([this] {
+                while(true) {
+                    std::function<void()> task;
+                    {
+                        std::unique_lock<std::mutex> lock(queue_mutex);
+                        task_condition.wait(lock, [this] {
+                            return stop || !tasks.empty();
+                        });
+                        
+                        if(stop && tasks.empty()) {
+                            return;
+                        }
+                        
+                        task = std::move(tasks.front());
+                        tasks.pop();
+                    }
+                    
+                    active_tasks++;
+                    task();
+                    
+                    {
+                        std::unique_lock<std::mutex> lock(queue_mutex);
+                        active_tasks--;
+                    }
+                    finished_condition.notify_all();
+                }
+            });
+        }
+    }
+
+    template<class F>
+    void enqueue(F&& f) {
+        {
+            std::unique_lock<std::mutex> lock(queue_mutex);
+            tasks.emplace(std::forward<F>(f));
+        }
+        task_condition.notify_one();
+    }
+
+    void wait_all() {
+        std::unique_lock<std::mutex> lock(queue_mutex);
+        finished_condition.wait(lock, [this] {
+            return tasks.empty() && active_tasks == 0;
+        });
+    }
+
+    ~ThreadPool() {
+        {
+            std::unique_lock<std::mutex> lock(queue_mutex);
+            stop = true;
+        }
+        task_condition.notify_all();
+        for(std::thread& worker : workers) {
+            worker.join();
+        }
+    }
+};    
+
+
 color beerslaw(double t, color absorp)
 {
 	return color(exp(-t * absorp.x()), exp(-t * absorp.y()), exp(-t * absorp.z()));
@@ -33,7 +107,7 @@ color RayColor(const ray& r, const scene_list& world, const camera& cam, int dep
 	}
 
 	hitRecord rec;
-	if(world.hit(r, 0.001, infinity, rec))
+	if(world.hit(r, 0.0001, infinity, rec, nullptr))
 	{
 		if(auto basicmat = rec.mat_ptr->as_basic())
 		{
@@ -53,7 +127,7 @@ color RayColor(const ray& r, const scene_list& world, const camera& cam, int dep
 			{
 				color ber = color(1,1,1);
 				hitRecord refrec;
-				if(world.hit(ray(rec.p, unit(diemat->reflected_ray(r, rec).direction())), 0.001, infinity, refrec))
+				if(world.hit(ray(rec.p, unit(diemat->reflected_ray(r, rec).direction())), 0.001, infinity, refrec, nullptr))
 				{
 					ber = beerslaw(refrec.t, diemat->absorption_coef);
 				}
@@ -80,7 +154,7 @@ color RayColor(const ray& r, const scene_list& world, const camera& cam, int dep
 
 				color ber = color(1,1,1);
 				hitRecord refrec;
-				if(world.hit(ray(rec.p, unit(diemat->reflected_ray(r, rec).direction())), 0.001, infinity, refrec))
+				if(world.hit(ray(rec.p, unit(diemat->reflected_ray(r, rec).direction())), 0.001, infinity, refrec, nullptr))
 				{
 					ber = beerslaw(refrec.t, diemat->absorption_coef);
 				}
@@ -94,7 +168,7 @@ color RayColor(const ray& r, const scene_list& world, const camera& cam, int dep
 
 			color ber = color(1,1,1);
 			hitRecord refrec;
-			if(world.hit(ray(rec.p, refractdir), 0.001, infinity, refrec))
+			if(world.hit(ray(rec.p, refractdir), 0.001, infinity, refrec, nullptr))
 			{
 				ber = beerslaw(refrec.t, diemat->absorption_coef);
 			}
@@ -174,7 +248,34 @@ std::shared_ptr<material> convert_material(const parser::Material& mat)
 	return mesh_material;
 }
 
-scene_list hittableListFromScene(const parser::Scene& scene)
+mat4 model_matrix_from_transforms(const std::vector<std::string>& transforms, parser::Scene& scene)
+{
+	mat4 model = mat4(1.0f);
+	for(auto transform : transforms)
+	{
+		if (transform[0] == 't')
+		{
+			assert(scene.translations.count(transform) > 0);
+			auto translation = scene.translations[transform];
+			model = mat4::translate(vec3(translation.translation.x, translation.translation.y, translation.translation.z)) * model;
+		}
+		else if (transform[0] == 's')
+		{
+			assert(scene.scalings.count(transform) > 0);
+			auto scaling = scene.scalings[transform];
+			model = mat4::scale(vec3(scaling.scaling.x, scaling.scaling.y, scaling.scaling.z)) * model;
+		}
+		else if (transform[0] == 'r')
+		{
+			assert(scene.rotations.count(transform) > 0);
+			auto rotation = scene.rotations[transform];
+			model = mat4::rotate_degrees(to_v(rotation.rotation), rotation.angle) * model;
+		}
+	}
+	return model;
+}
+
+scene_list hittableListFromScene(parser::Scene& scene)
 {
 	scene_list world;
 
@@ -206,13 +307,17 @@ scene_list hittableListFromScene(const parser::Scene& scene)
 			//world.add(std::make_shared<triangle>(p1, p2, p3, mesh_material));
 		}
 
+		if(triangles.size() > 0)
 		{
 			//build bvh
 			auto bvh = std::make_shared<BVH>();
 			bvh->build(std::move(triangles));
+			bvh->model = model_matrix_from_transforms(mesh.transformations, scene);
 			world.add(bvh);
 		}
+		triangles.clear();
 	}
+
 
 	for(auto& sp : scene.spheres)
 	{
@@ -221,7 +326,11 @@ scene_list hittableListFromScene(const parser::Scene& scene)
 		auto& mat = scene.materials[sp.material_id-1];
 		std::shared_ptr<material> mesh_material = convert_material(mat);
 
-		world.add(std::make_shared<sphere>(c, sp.radius, mesh_material));
+		auto sph = std::make_shared<sphere>(c, sp.radius, mesh_material);
+
+		sph->model = model_matrix_from_transforms(sp.transformations, scene);
+
+		world.add(sph);
 	}
 
 
@@ -242,17 +351,20 @@ scene_list hittableListFromScene(const parser::Scene& scene)
 		auto& mat = scene.materials[tr.material_id-1];
 		std::shared_ptr<material> mesh_material = convert_material(mat);
 		triangle t(p1, p2, p3, mesh_material);
-		triangles.push_back(t);
-		//world.add(std::make_shared<triangle>(p1, p2, p3, mesh_material));
+
+		t.model = model_matrix_from_transforms(tr.transformations, scene);
+
+		//triangles.push_back(t);
+		world.add(std::make_shared<triangle>(t));
 	}
 
-	if(triangles.size() > 0)
-	{
-		//build bvh
-		auto bvh = std::make_shared<BVH>();
-		bvh->build(std::move(triangles));
-		world.add(bvh);
-	}
+	//if(triangles.size() > 0)
+	//{
+	//	//build bvh
+	//	auto bvh = std::make_shared<BVH>();
+	//	bvh->build(std::move(triangles));
+	//	world.add(bvh);
+	//}
 
 
 	world.ambient_light = to_c(scene.ambient_light);
@@ -303,38 +415,48 @@ void render_camera(parser::Scene& scene, int camera_idx, scene_list& world)
 	//	return;
 	//}
 
-
 	std::vector<std::future<void>> threads;
-	for (int j = imageHeight - 1; j >= 0; j--)
-	{
-		for (int i = imageWidth - 1; i >= 0; i--)
-		{
-			threads.emplace_back(std::async([i, j, &cam, &world, imageHeight, imageWidth, maxDepth, &img]()
-				{
-					color pixelColor(0, 0, 0);
-					const auto u = (i + 0.5f) / (imageWidth - 1);
-					const auto v = (j + 0.5f) / (imageHeight - 1);
-					ray r = cam.getRay(u, v);
-					pixelColor += RayColor(r, world, cam, maxDepth-1);
-					img[j][i] = pixelColor;
-				}));
 
-			if(threads.size() > 256)
-			{
-				for (auto& thread : threads)
+	const size_t num_threads = std::thread::hardware_concurrency();
+    ThreadPool pool(num_threads);
+
+	const int TILE_SIZE_X = 32;
+    const int TILE_SIZE_Y = 32;
+
+    // Calculate number of tiles
+    const int num_tiles_x = (imageWidth + TILE_SIZE_X - 1) / TILE_SIZE_X;
+    const int num_tiles_y = (imageHeight + TILE_SIZE_Y - 1) / TILE_SIZE_Y;
+    const int total_tiles = num_tiles_x * num_tiles_y;
+
+	for (int ty = 0; ty < num_tiles_y; ty++)
+	{
+		for (int tx = 0; tx < num_tiles_x; tx++)
+		{
+            int startX = tx * TILE_SIZE_X;
+            int startY = ty * TILE_SIZE_Y;
+            int endX = std::min(startX + TILE_SIZE_X, imageWidth);
+            int endY = std::min(startY + TILE_SIZE_Y, imageHeight);
+
+			pool.enqueue([total_tiles, startX, startY, endX, endY, &cam, &world, imageHeight, imageWidth, maxDepth, &img]()
 				{
-					thread.wait();
-				}
-				threads.clear();
-				std::cerr << "\r" << static_cast<int>((((imageWidth-i) + (imageHeight - j) * imageWidth) / static_cast<double>(imageHeight * imageWidth)) * 100.0) << "% of rendering is completed         " << std::flush;
-			}
+					for (int j = endY - 1; j >= startY; j--)
+					{
+						for (int i = startX; i < endX; i++)
+						{
+							color pixelColor(0, 0, 0);
+							const auto u = (i + 0.5f) / (imageWidth);
+							const auto v = (j + 0.5f) / (imageHeight);
+							ray r = cam.getRay(u, v);
+							pixelColor += RayColor(r, world, cam, maxDepth - 1);
+							img[j][i] = pixelColor;
+						}
+					}
+				});
 		}
 	}
-	for (auto& thread : threads)
-	{
-		thread.get();
-	}
 
+	pool.wait_all();
+	
 	//convert img data to raw for saving as png using stb (r g b floats range in 0.0f - 255.99f)
 	std::vector<unsigned char> raw;
 	raw.resize(imageWidth * imageHeight * 3);

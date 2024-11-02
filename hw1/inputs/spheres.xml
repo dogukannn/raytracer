@@ -8,7 +8,7 @@
             <Position> 0 2.5 0 </Position>
             <Gaze> 0 -0.2 -1 </Gaze> <!-- Watch out: make the uvw vectors orthonormal -->
             <Up> 0 1 0 </Up>
-            <NearPlane> -1 1 -1 1 10</NearPlane>
+            <NearPlane> -1 1 -1 1</NearPlane>
             <NearDistance>10</NearDistance>
             <ImageResolution> 720 720 </ImageResolution>
             <ImageName> spheres.png </ImageName>

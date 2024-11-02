@@ -1,5 +1,7 @@
 #include "Include/bvh.h"
 
+#define BASIC_SPLIT_EXP
+
 #include <cmath>
 
 bool hitAABB(const ray& r, const vec3& bmin, const vec3& bmax)
@@ -44,7 +46,7 @@ bool hitAABB(const ray& r, const vec3& bmin, const vec3& bmax)
 	return true;
 }
 
-bool BVH::hit(const ray& r, double tMin, double tMax, hitRecord& rec) const
+bool BVH::hit(const ray& r, double tMin, double tMax, hitRecord& rec, mat4* model) const
 {
 	bool hit = false;
 	std::vector<uint32_t> stack;
@@ -65,7 +67,7 @@ bool BVH::hit(const ray& r, double tMin, double tMax, hitRecord& rec) const
 				{
 					const triangle& triangle = triangles[triangleIndices[i]];
 					hitRecord temp_rec;
-					if (triangle.hit(r, tMin, tMax, temp_rec))
+					if (triangle.hit(r, tMin, tMax, temp_rec, model))
 					{
 						hit = true;
 						tMax = temp_rec.t;
@@ -97,7 +99,7 @@ void BVH::build(std::vector<triangle>&& _triangles)
 
 	for (auto& triangle : triangles)
 	{
-		triangle.centroid = (triangle.p1 + triangle.p2 + triangle.p3) * 0.3333f;
+		triangle.centroid = (triangle.p1 + triangle.p2 + triangle.p3) * 0.333333f;
 	}
 
 	nodes.resize(2 * triangles.size() - 1);
@@ -140,8 +142,77 @@ void BVH::Subdivide(uint32_t nodeIdx)
 	if (extents.z() > extents[axis])
 		axis = 2;
 
-	//float split = 0.5f * (node.aabb_min[axis] + node.aabb_max[axis]);
-	float split = node.aabb_min[axis] + extents[axis] * 0.5f;
+	float split = 0.5f * (node.aabb_min[axis] + node.aabb_max[axis]);
+
+#ifdef BASIC_SPLIT_EXP
+	//check each axis split count to choose  the best one
+	int left_counts[10][3];
+	int axis_bins[3] = {0, 0, 0};
+	for(int j = 0; j < 10; j++)
+	{
+		for (int i = 0; i < 3; i++)
+		{
+			left_counts[j][i] = 0;
+			float temp_split = (0.1f * j) * (node.aabb_min[i] + node.aabb_max[i]);
+			for (int k = node.first; k < node.first + node.count; k++)
+			{
+				if (triangles[triangleIndices[k]].centroid[i] < temp_split)
+					left_counts[j][i]++;
+			}
+		}
+	}
+
+	int axis_one_min_diff = INT_MAX;
+	for (int j = 0; j < 10; j++)
+	{
+		int axis_one_diff = abs(left_counts[j][0] - ((int)node.count - left_counts[j][0]));
+		if (axis_one_diff < axis_one_min_diff)
+		{
+			axis_one_min_diff = axis_one_diff;
+			axis_bins[0] = j;
+		}
+	}
+
+	int axis_two_min_diff = INT_MAX;
+	int axis_two_bin = 0;
+	for (int j = 0; j < 10; j++)
+	{
+		int axis_two_diff = abs(left_counts[j][1] - ((int)node.count - left_counts[j][1]));
+		if (axis_two_diff < axis_two_min_diff)
+		{
+			axis_two_min_diff = axis_two_diff;
+			axis_bins[1] = j;
+		}
+	}
+
+	int axis_three_min_diff = INT_MAX;
+	int axis_three_bin = 0;
+	for (int j = 0; j < 10; j++)
+	{
+		int axis_three_diff = abs(left_counts[j][2] - ((int)node.count - left_counts[j][2]));
+		if (axis_three_diff < axis_three_min_diff)
+		{
+			axis_three_min_diff = axis_three_diff;
+			axis_bins[2] = j;
+		}
+	}
+
+	int axis_one_diff = abs(left_counts[axis_bins[0]][0] - ((int)node.count - left_counts[axis_bins[0]][0]));
+	int axis_two_diff = abs(left_counts[axis_bins[1]][1] - ((int)node.count - left_counts[axis_bins[1]][1]));
+	int axis_three_diff = abs(left_counts[axis_bins[2]][2] - ((int)node.count - left_counts[axis_bins[2]][2]));
+
+	//get the smallest diff
+	if (axis_one_diff <= axis_two_diff && axis_one_diff <= axis_three_diff)
+		axis = 0;
+	else if (axis_two_diff <= axis_one_diff && axis_two_diff <= axis_three_diff)
+		axis = 1;
+	else
+		axis = 2;
+
+	split = (0.1f * axis_bins[axis]) * (node.aabb_min[axis] + node.aabb_max[axis]);
+#endif 
+	
+	//float split = (node.aabb_min[axis] + extents[axis]) * 0.5f;
 
 	int i = node.first;
 	int j = node.first + node.count - 1;

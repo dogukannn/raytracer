@@ -42,7 +42,7 @@ struct material
 			//shadow_ray.dir = unit(shadow_ray.dir);
 
 			hitRecord srec;
-			if (scene.hit(shadow_ray, 0.0001, (light->position - rec.p + rec.normal * 0.001).length(), srec))
+			if (scene.hit(shadow_ray, 0.00001, (light->position - rec.p + rec.normal * 0.001).length(), srec, nullptr))
 			{
 				continue;
 			}
