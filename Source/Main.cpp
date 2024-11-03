@@ -281,41 +281,67 @@ scene_list hittableListFromScene(parser::Scene& scene)
 
 	std::vector<triangle> triangles;
 
-	for(auto& mesh : scene.meshes)
+	std::unordered_map<int, std::shared_ptr<BVH>> bvh_map;
+	std::unordered_map<int, mat4> mesh_model_map;
+
+	for(auto& [mesh_id, mesh] : scene.meshes)
 	{
 		auto& mat = scene.materials[mesh.material_id-1];
 
 		std::shared_ptr<material> mesh_material = convert_material(mat);
-				
-		for(auto& face : mesh.faces)
+
+		if (!mesh.is_instance)
 		{
-			point3 p1 = { scene.vertex_data[face.v0_id-1].x,
-							scene.vertex_data[face.v0_id-1].y,
-							scene.vertex_data[face.v0_id-1].z };
+			for(auto& face : mesh.faces)
+			{
+				point3 p1 = { scene.vertex_data[face.v0_id-1].x,
+								scene.vertex_data[face.v0_id-1].y,
+								scene.vertex_data[face.v0_id-1].z };
 
-			point3 p2 = { scene.vertex_data[face.v1_id-1].x,
-							scene.vertex_data[face.v1_id-1].y,
-							scene.vertex_data[face.v1_id-1].z };
+				point3 p2 = { scene.vertex_data[face.v1_id-1].x,
+								scene.vertex_data[face.v1_id-1].y,
+								scene.vertex_data[face.v1_id-1].z };
 
-			point3 p3 = { scene.vertex_data[face.v2_id-1].x,
-							scene.vertex_data[face.v2_id-1].y,
-							scene.vertex_data[face.v2_id-1].z };
+				point3 p3 = { scene.vertex_data[face.v2_id-1].x,
+								scene.vertex_data[face.v2_id-1].y,
+								scene.vertex_data[face.v2_id-1].z };
 
 
-			triangle t(p1, p2, p3, mesh_material);
-			triangles.push_back(t);
-			//world.add(std::make_shared<triangle>(p1, p2, p3, mesh_material));
+				triangle t(p1, p2, p3, mesh_material);
+				triangles.push_back(t);
+				//world.add(std::make_shared<triangle>(p1, p2, p3, mesh_material));
+			}
+
+			if(triangles.size() > 0)
+			{
+				//build bvh
+				auto bvh = std::make_shared<BVH>();
+				bvh->build(std::move(triangles));
+				bvh_map[mesh_id] = bvh;
+				auto bvh_instance = std::make_shared<BVHInstance>(bvh);
+				bvh_instance->model = model_matrix_from_transforms(mesh.transformations, scene);
+				mesh_model_map[mesh_id] = bvh_instance->model;
+				bvh_instance->mat_ptr = mesh_material;
+				world.add(bvh_instance);
+			}
+			triangles.clear();
 		}
-
-		if(triangles.size() > 0)
+		else
 		{
-			//build bvh
-			auto bvh = std::make_shared<BVH>();
-			bvh->build(std::move(triangles));
-			bvh->model = model_matrix_from_transforms(mesh.transformations, scene);
-			world.add(bvh);
+			auto bvh_instance = std::make_shared<BVHInstance>(bvh_map[mesh.base_mesh_id]);
+			if (mesh.reset_transform)
+			{
+				bvh_instance->model = model_matrix_from_transforms(mesh.transformations, scene);
+			}
+			else
+			{
+				bvh_instance->model = model_matrix_from_transforms(mesh.transformations, scene) * mesh_model_map[mesh.base_mesh_id];
+			}
+			bvh_map[mesh_id] = bvh_map[mesh.base_mesh_id];
+			mesh_model_map[mesh_id] = bvh_instance->model;
+			bvh_instance->mat_ptr = mesh_material;
+			world.add(bvh_instance);
 		}
-		triangles.clear();
 	}
 
 

@@ -3,6 +3,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <map>
 #include <vector>
 
 namespace parser
@@ -67,16 +68,13 @@ namespace parser
 
     struct Mesh
     {
+		bool is_instance = false;
+		bool reset_transform = false;
+        int base_mesh_id;
+
         int material_id;
         std::vector<Face> faces;
 
-		std::vector<std::string> transformations;
-    };
-
-    struct MeshInstance
-    {
-		int mesh_id;
-		bool reset_transform = false;
 		std::vector<std::string> transformations;
     };
 
@@ -124,7 +122,9 @@ namespace parser
         std::vector<PointLight> point_lights;
         std::vector<Material> materials;
         std::vector<Vec3f> vertex_data;
-        std::vector<Mesh> meshes;
+
+        std::map<int, Mesh> meshes;
+
         std::vector<Triangle> triangles;
         std::vector<Sphere> spheres;
 

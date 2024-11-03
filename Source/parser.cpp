@@ -348,11 +348,13 @@ void parser::Scene::loadFromXml(const std::string &filepath)
 
         child = element->FirstChildElement("Faces");
 
-        auto plyFile = (child->Attribute("plyFile"));
-        if (plyFile)
-        {
+        auto mesh_id = (element->Attribute("id"));
+
+		auto plyFile = (child->Attribute("plyFile"));
+		if (plyFile)
+		{
 			mesh_offset = vertex_data.size();
-	        std::string plyFilePath = plyFile;
+			std::string plyFilePath = plyFile;
 			//add directory to the file path
 			plyFilePath = directory + plyFilePath;
 
@@ -376,8 +378,8 @@ void parser::Scene::loadFromXml(const std::string &filepath)
 				mesh.faces.push_back(face);
 			}
 		}
-        else
-        {
+		else
+		{
 			stream << child->GetText() << std::endl;
 			Face face;
 			while (!(stream >> face.v0_id).eof())
@@ -386,7 +388,8 @@ void parser::Scene::loadFromXml(const std::string &filepath)
 				mesh.faces.push_back(face);
 			}
 			stream.clear();
-        }
+		}
+
 
 		auto transformations = element->FirstChildElement("Transformations");
         if (transformations)
@@ -401,12 +404,57 @@ void parser::Scene::loadFromXml(const std::string &filepath)
 			stream.clear();
         }
 
-        meshes.push_back(mesh);
+		meshes[std::stoi(mesh_id)] = mesh;
         mesh.faces.clear();
         mesh.transformations.clear();
         element = element->NextSiblingElement("Mesh");
     }
     stream.clear();
+
+    //Get Mesh Instances
+    mesh.faces.clear();
+	mesh.transformations.clear();
+    element = root->FirstChildElement("Objects");
+    element = element->FirstChildElement("MeshInstance");
+    while (element)
+    {
+        child = element->FirstChildElement("Material");
+        stream << child->GetText() << std::endl;
+        stream >> mesh.material_id;
+
+        auto instance_id = (element->Attribute("id"));
+
+		//this is an instanced mesh
+		mesh.is_instance = true;
+		auto base_mesh_id = (element->Attribute("baseMeshId"));
+		mesh.base_mesh_id = std::stoi(base_mesh_id);
+		if (element->Attribute("resetTransform", "true"))
+		{
+			mesh.reset_transform = true;
+		}
+
+
+		auto transformations = element->FirstChildElement("Transformations");
+        if (transformations)
+        {
+			std::string transformation;
+            stream << transformations->GetText() << std::endl;
+            while (!(stream >> transformation).eof())
+            {
+                mesh.transformations.push_back(transformation);
+                transformation.clear();
+            }
+			stream.clear();
+        }
+
+		meshes[std::stoi(instance_id)] = mesh;
+
+        mesh.faces.clear();
+        mesh.transformations.clear();
+        element = element->NextSiblingElement("MeshInstance");
+    }
+    stream.clear();
+
 
     //Get Triangles
     element = root->FirstChildElement("Objects");

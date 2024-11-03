@@ -46,18 +46,18 @@ bool hitAABB(const ray& r, const vec3& bmin, const vec3& bmax)
 	return true;
 }
 
-bool BVH::hit(const ray& r, double tMin, double tMax, hitRecord& rec, mat4* model) const
+bool BVHInstance::hit(const ray& r, double tMin, double tMax, hitRecord& rec, mat4* model) const
 {
 	bool hit = false;
 	std::vector<uint32_t> stack;
-	stack.push_back(rootNodeIdx);
+	stack.push_back(bvh->rootNodeIdx);
 
 	while (!stack.empty())
 	{
 		uint32_t nodeIdx = stack.back();
 		stack.pop_back();
 
-		const BVHNode& node = nodes[nodeIdx];
+		const BVHNode& node = bvh->nodes[nodeIdx];
 
 		if (hitAABB(r, node.aabb_min, node.aabb_max))
 		{
@@ -65,13 +65,14 @@ bool BVH::hit(const ray& r, double tMin, double tMax, hitRecord& rec, mat4* mode
 			{
 				for (uint32_t i = node.first; i < node.first + node.count; i++)
 				{
-					const triangle& triangle = triangles[triangleIndices[i]];
+					const triangle& triangle = bvh->triangles[bvh->triangleIndices[i]];
 					hitRecord temp_rec;
 					if (triangle.hit(r, tMin, tMax, temp_rec, model))
 					{
 						hit = true;
 						tMax = temp_rec.t;
 						rec = temp_rec;
+						rec.mat_ptr = mat_ptr;
 					}
 				}
 			}
