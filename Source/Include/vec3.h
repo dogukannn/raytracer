@@ -225,7 +225,8 @@ struct vec4 {
     float e[4];
     vec4() : e{0,0,0,1} {}
     vec4(float e0, float e1, float e2, float e3) : e{e0, e1, e2, e3} {}
-    vec4(const vec3& v, float e3) : e{v.x(), v.y(), v.z(), e3} {}
+    vec4(const vec3& v, float e3) :
+		e{v.x(), v.y(), v.z(), e3} {}
     //vec4(vec3 v, float e3) : e{v.x(), v.y(), v.z(), e3} {}
 
 

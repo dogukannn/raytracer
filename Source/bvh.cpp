@@ -46,7 +46,7 @@ bool hitAABB(const ray& r, const vec3& bmin, const vec3& bmax)
 	return true;
 }
 
-bool BVHInstance::hit(const ray& r, double tMin, double tMax, hitRecord& rec, mat4* model) const
+bool BVHInstance::hit(const ray& r, double tMin, double tMax, hitRecord& rec, mat4* _model) const
 {
 	bool hit = false;
 	std::vector<uint32_t> stack;
@@ -67,7 +67,7 @@ bool BVHInstance::hit(const ray& r, double tMin, double tMax, hitRecord& rec, ma
 				{
 					const triangle& triangle = bvh->triangles[bvh->triangleIndices[i]];
 					hitRecord temp_rec;
-					if (triangle.hit(r, tMin, tMax, temp_rec, model))
+					if (triangle.hit(r, tMin, tMax, temp_rec, _model))
 					{
 						hit = true;
 						tMax = temp_rec.t;

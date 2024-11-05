@@ -140,7 +140,7 @@ struct triangle : public hittable
 
 
 //best results
-inline bool triangle::hit(const ray& r, double tMin, double tMax, hitRecord& rec, mat4* model) const {
+inline bool triangle::hit(const ray& r, double tMin, double tMax, hitRecord& rec, mat4* _model) const {
     const vec3& v0 = p1;
     const vec3& v1 = p2;
     const vec3& v2 = p3;
@@ -201,13 +201,53 @@ inline bool triangle::hit(const ray& r, double tMin, double tMax, hitRecord& rec
     
     // If we passed all tests, update hit record
     rec.t = t;
-    if(model)
-		rec.p = to_vec3((*model * vec4(P, 1.0f)));
+  //  if(_model)
+		//rec.p = to_vec3((*_model * vec4(P, 1.0f)));
+  //  else
+		//rec.p = P;
+
+    if(_model)
+		rec.p = to_vec3((*_model * vec4(r.at(rec.t), 1.0f)));
     else
-		rec.p = P;
-    rec.setFaceNormal(r, normal);
-    if(model)
-		rec.normal = unit(to_vec3(model->inverse().transpose() * vec4(rec.normal, 0.0f)));
+		rec.p = r.at(rec.t);
+
+
+	rec.setFaceNormal(r, normal);
+    if(_model)
+    {
+  //      auto inv = _model->inverse();
+		//auto tv = inv.transpose();
+        
+		rec.normal = unit(to_vec3((_model->transpose().inverse()) * vec4(normal, 0.0f)));
+		//vec3 tv0 = p1;
+		//vec3 tv1 = p2;
+		//vec3 tv2 = p3;
+
+		//tv0 = to_vec3(*_model * vec4(tv0, 1.0f));
+		//tv1 = to_vec3(*_model * vec4(tv1, 1.0f));
+		//tv2 = to_vec3(*_model * vec4(tv2, 1.0f));
+
+  //  	vec3 tv0v1 = tv1 - tv0;
+		//vec3 tv0v2 = tv2 - tv0;
+		//rec.normal = unit(cross(tv0v1, tv0v2));
+
+		//ray newRay = r;
+		//vec4 origin = vec4(newRay.origin(), 1.0f);
+		//vec4 direction = vec4(newRay.direction(), 0.0f);
+
+		//vec4 newOrigin = *_model * origin;
+		//vec4 newDirection = *_model * direction;
+
+
+		//newRay = ray(vec3(newOrigin.x(), newOrigin.y(), newOrigin.z()), vec3(newDirection.x(), newDirection.y(), newDirection.z()));
+
+		//rec.frontFace = dot(newRay.direction(), rec.normal) < 0;
+		//rec.normal = rec.frontFace ? rec.normal : -rec.normal;
+
+		rec.normal = rec.frontFace ? rec.normal : -rec.normal;
+    }
+
+
     rec.mat_ptr = mat_ptr;
     
     return true;

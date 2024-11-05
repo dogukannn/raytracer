@@ -115,7 +115,7 @@ color RayColor(const ray& r, const scene_list& world, const camera& cam, int dep
 		}
 		else if (auto mirrormat = rec.mat_ptr->as_mirror())
 		{
-			return mirrormat->calc_color(r, rec, world, cam) + mirrormat->mirror_reflectance * RayColor(mirrormat->reflected_ray(r, rec), world, cam, depth - 1);
+			return mirrormat->calc_color(r, rec, world, cam) + mirrormat->mirror_reflectance * RayColor(ray(rec.p + rec.normal * 0.001f, unit(mirrormat->reflected_ray(r, rec).direction())), world, cam, depth - 1);
 		}
 		else if (auto diemat = rec.mat_ptr->as_dielectric())
 		{

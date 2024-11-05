@@ -448,9 +448,9 @@ void parser::Scene::loadFromXml(const std::string &filepath)
         }
 
 		meshes[std::stoi(instance_id)] = mesh;
-
         mesh.faces.clear();
         mesh.transformations.clear();
+        mesh.reset_transform = false;
         element = element->NextSiblingElement("MeshInstance");
     }
     stream.clear();

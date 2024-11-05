@@ -42,7 +42,7 @@ inline bool scene_list::hit(const ray& r, double tMin, double tMax, hitRecord& r
 		newRay = ray(vec3(newOrigin.x(), newOrigin.y(), newOrigin.z()), vec3(newDirection.x(), newDirection.y(), newDirection.z()));
 
 		//newRay.dir = unit(newRay.direction());
-
+		
 		if(object->hit(newRay, tMin, closestSoFar, tmpRec, &object->model))
 		{
 			hitAnything = true;
