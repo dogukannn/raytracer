@@ -266,16 +266,6 @@ void parser::Scene::loadFromXml(const std::string &filepath)
     }
     stream.clear();
 
-	//<Transformations>
-	//<Translation id="1">10 -10 0</Translation>
-	//<Translation id="2">-10 -30 0</Translation>
-	//<Rotation id="1">10 0 0 1</Rotation>
-	//<Rotation id="2">-10 0 0 1</Rotation>
-	//<Scaling id="1">10000 10000 1</Scaling>
-	//<Translation id="3">0 20 0</Translation>
-	//</Transformations>
-	//Get transformations
-
 	element = root->FirstChildElement("Transformations");
     if(element)
     {
@@ -288,8 +278,6 @@ void parser::Scene::loadFromXml(const std::string &filepath)
 				Vec3f translation_vec;
 				stream >> translation_vec.x >> translation_vec.y >> translation_vec.z;
 
-				std::cout << "t" << translation_id << std::endl;
-				std::cout << translation_vec.x << " " << translation_vec.y << " " << translation_vec.z << std::endl;
 				translation = translation->NextSiblingElement("Translation");
 
 				translations["t" + std::string(translation_id)] = Translation{translation_vec};
@@ -305,8 +293,6 @@ void parser::Scene::loadFromXml(const std::string &filepath)
 				Vec3f scaling_vec;
 				stream >> scaling_vec.x >> scaling_vec.y >> scaling_vec.z;
 
-				std::cout << "s" << scaling_id << std::endl;
-				std::cout << scaling_vec.x << " " << scaling_vec.y << " " << scaling_vec.z << std::endl;
 				scaling = scaling->NextSiblingElement("Scaling");
 
 				scalings["s" + std::string(scaling_id)] = Scaling{ scaling_vec };
@@ -322,9 +308,6 @@ void parser::Scene::loadFromXml(const std::string &filepath)
 				float angle;
 				Vec3f axis;
 				stream >> angle >> axis.x >> axis.y >> axis.z;
-
-				std::cout << "r" << rotation_id << std::endl;
-				std::cout << angle << " " << axis.x << " " << axis.y << " " << axis.z << std::endl;
 
 				rotation = rotation->NextSiblingElement("Rotation");
 

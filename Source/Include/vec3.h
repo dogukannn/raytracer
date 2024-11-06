@@ -289,10 +289,10 @@ struct mat4 {
         mat4 result;
         float det = determinant();
         
-        if (abs(det) < 1e-8f) {
-            // Matrix is not invertible
-            return mat4(0.0f);
-        }
+        //if (abs(det) < 1e-8f) {
+        //    // Matrix is not invertible
+        //    return mat4(0.0f);
+        //}
 
         float inv_det = 1.0f / det;
 

@@ -20,6 +20,7 @@
 #include "Include/bvh.h"
 #include "Include/stb_image_write.h"
 
+//#define OLD_THREADING
 
 class ThreadPool {
 public:
@@ -119,6 +120,12 @@ color RayColor(const ray& r, const scene_list& world, const camera& cam, int dep
 		}
 		else if (auto diemat = rec.mat_ptr->as_dielectric())
 		{
+
+			if (!rec.frontFace)
+			{
+				rec.normal = -rec.normal;
+			}
+
 			double refractionRatio = rec.frontFace ? (1.0 / diemat->refraction_index) : diemat->refraction_index;
 			auto d = unit(r.direction());
 			double cosi = dot(-d, rec.normal);
@@ -384,15 +391,6 @@ scene_list hittableListFromScene(parser::Scene& scene)
 		world.add(std::make_shared<triangle>(t));
 	}
 
-	//if(triangles.size() > 0)
-	//{
-	//	//build bvh
-	//	auto bvh = std::make_shared<BVH>();
-	//	bvh->build(std::move(triangles));
-	//	world.add(bvh);
-	//}
-
-
 	world.ambient_light = to_c(scene.ambient_light);
 	for(auto& pl : scene.point_lights)
 	{
@@ -432,6 +430,7 @@ void render_camera(parser::Scene& scene, int camera_idx, scene_list& world)
 		vec.resize(imageWidth);
 	}
 
+	//debug specific pixel
 	//{
 	//	color pixelColor(0, 0, 0);
 	//	const auto u = (475 + 0.5f) / (imageWidth - 1);
@@ -441,6 +440,38 @@ void render_camera(parser::Scene& scene, int camera_idx, scene_list& world)
 	//	return;
 	//}
 
+#ifdef OLD_THREADING
+std::vector<std::future<void>> threads;
+	for (int j = imageHeight - 1; j >= 0; j--)
+	{
+		for (int i = imageWidth - 1; i >= 0; i--)
+		{
+			threads.emplace_back(std::async([i, j, &cam, &world, imageHeight, imageWidth, maxDepth, &img]()
+				{
+					color pixelColor(0, 0, 0);
+					const auto u = (i + 0.5f) / (imageWidth - 1);
+					const auto v = (j + 0.5f) / (imageHeight - 1);
+					ray r = cam.getRay(u, v);
+					pixelColor += RayColor(r, world, cam, maxDepth-1);
+					img[j][i] = pixelColor;
+				}));
+
+			if(threads.size() > 256)
+			{
+				for (auto& thread : threads)
+				{
+					thread.wait();
+				}
+				threads.clear();
+				std::cerr << "\r" << static_cast<int>((((imageWidth-i) + (imageHeight - j) * imageWidth) / static_cast<double>(imageHeight * imageWidth)) * 100.0) << "% of rendering is completed         " << std::flush;
+			}
+		}
+	}
+	for (auto& thread : threads)
+	{
+		thread.get();
+	}
+#else
 	std::vector<std::future<void>> threads;
 
 	const size_t num_threads = std::thread::hardware_concurrency();
@@ -482,6 +513,7 @@ void render_camera(parser::Scene& scene, int camera_idx, scene_list& world)
 	}
 
 	pool.wait_all();
+#endif
 	
 	//convert img data to raw for saving as png using stb (r g b floats range in 0.0f - 255.99f)
 	std::vector<unsigned char> raw;

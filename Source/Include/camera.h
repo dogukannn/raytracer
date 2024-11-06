@@ -20,22 +20,12 @@ struct camera
 	       double aperture,
 	       double focusDist)
 	{
-		//auto theta = degreesToRadians(vfov);
-		//auto h = tan(theta / 2);
-		//double viewportHeight = 2.0 * h;
-		//double viewportWidth = aspectRatio * viewportHeight;
-
-
-		//double viewportHeight = 2.0 * h;
-		//double viewportWidth = aspectRatio * viewportHeight;
 
 		w = unit(lookfrom - lookat);
 		u = unit(cross(vup, w));
 		v = cross(w, u);
 
 		origin = lookfrom;
-		//horizontal = focusDist * (near_plane.y - near_plane.x) * u;
-		//vertical = focusDist *  (near_plane.w - near_plane.z) * v;
 		horizontal = (near_plane.y - near_plane.x) * u;
 		vertical = (near_plane.w - near_plane.z) * v;
 		lowerLeftCorner = origin - (horizontal / 2.0) - (vertical / 2.0) - focusDist * w;
@@ -45,10 +35,6 @@ struct camera
 
 	ray getRay(float s, float t) const
 	{
-		//vec3 rd = lensRadius * randomInUnitSphere();
-		//vec3 offset = u * rd.x() + v * rd.y();
-		//return ray(origin + offset,  lowerLeftCorner + s * horizontal + t * vertical - origin - offset);
-
 		return ray(origin,  unit(lowerLeftCorner + s * horizontal + t * vertical - origin));
 
 	}

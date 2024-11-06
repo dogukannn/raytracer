@@ -1,6 +1,6 @@
 #include "Include/bvh.h"
 
-#define BASIC_SPLIT_EXP
+//#define BASIC_SPLIT_EXP
 
 #include <cmath>
 
@@ -213,8 +213,6 @@ void BVH::Subdivide(uint32_t nodeIdx)
 	split = (0.1f * axis_bins[axis]) * (node.aabb_min[axis] + node.aabb_max[axis]);
 #endif 
 	
-	//float split = (node.aabb_min[axis] + extents[axis]) * 0.5f;
-
 	int i = node.first;
 	int j = node.first + node.count - 1;
 
