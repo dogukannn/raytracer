@@ -1,6 +1,8 @@
 #pragma once
 #include "triangle.h"
 #include <vector>
+#include <climits>
+#include <cfloat>
 
 struct BVHNode
 {
