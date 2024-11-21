@@ -34,12 +34,16 @@ namespace parser
         float near_distance;
         int image_width, image_height;
         std::string image_name;
+
+		std::vector<std::string> transformations;
     };
 
     struct PointLight
     {
         Vec3f position;
         Vec3f intensity;
+
+		std::vector<std::string> transformations;
     };
 
     struct Material

@@ -1,0 +1,192 @@
+
+        <Scene>
+            <BackgroundColor>150 197 255</BackgroundColor>
+            <ShadowRayEpsilon>1e-3</ShadowRayEpsilon>
+            <IntersectionTestEpsilon>1e-6</IntersectionTestEpsilon>
+            <Cameras>
+                <Camera id="1">
+                    <Position>23.399429321289062 -30.164710998535156 27.274856567382812</Position>
+                    <Gaze>-0.5495308637619019 0.7033665180206299 -0.450878381729126</Gaze>
+                    <Up>-0.27758944034576416 0.3552963435649872 0.892585277557373</Up>
+                    <NearPlane>-1 1 -1.0 1.0</NearPlane>
+                    <NearDistance>3</NearDistance>
+                    <ImageResolution>800 800</ImageResolution>
+                    <ImageName>windmill_345.png</ImageName>
+                </Camera>
+            </Cameras>
+            <Lights>
+                <AmbientLight>0 0 0</AmbientLight>
+                <PointLight id="1">
+                    <Position>17.64766502380371 -15.21084976196289 29.963754653930664</Position>
+                    <Intensity>1000000.0 1000000.0 1000000.0</Intensity>
+                </PointLight>
+                <PointLight id="2">
+                    <Position>0.0 0.0 7.575457572937012</Position>
+                    <Intensity>10000.0 10000.0 10000.0</Intensity>
+                </PointLight>
+                <PointLight id="3">
+                    <Position>-1.0418275493540951e-15 -2.1327154636383057 2.883483648300171</Position>
+                    <Intensity>1000.0 1000.0 1000.0</Intensity>
+                </PointLight>
+            </Lights>
+
+            <Transformations>
+                <Rotation id="1">345 1 0 0</Rotation>
+                <Translation id="1">3.3092 0.57503 -11.888</Translation>
+                <Translation id="2">-3.3092 -0.57503 11.888</Translation>
+            </Transformations>
+
+            <Materials>
+                <Material id="1">
+                    <AmbientReflectance>1 1 1</AmbientReflectance>
+                    <DiffuseReflectance>0.20155633985996246 0.09989873319864273 0.036889463663101196</DiffuseReflectance>
+                    <SpecularReflectance>0.0 0.0 0.0</SpecularReflectance>
+                    <PhongExponent>1</PhongExponent>
+                </Material>
+                <Material id="2">
+                    <AmbientReflectance>1 1 1</AmbientReflectance>
+                    <DiffuseReflectance>0.8000000715255737 0.7391534447669983 0.08431411534547806</DiffuseReflectance>
+                    <SpecularReflectance>0.0 0.0 0.0</SpecularReflectance>
+                    <PhongExponent>1</PhongExponent>
+                </Material>
+                <Material id="3">
+                    <AmbientReflectance>1 1 1</AmbientReflectance>
+                    <DiffuseReflectance>0.5394797921180725 0.03688935562968254 0.022173896431922913</DiffuseReflectance>
+                    <SpecularReflectance>0.0 0.0 0.0</SpecularReflectance>
+                    <PhongExponent>1</PhongExponent>
+                </Material>
+                <Material id="4">
+                    <AmbientReflectance>1 1 1</AmbientReflectance>
+                    <DiffuseReflectance>0.3762623071670532 0.03560128062963486 0.015996301546692848</DiffuseReflectance>
+                    <SpecularReflectance>0.0 0.0 0.0</SpecularReflectance>
+                    <PhongExponent>1</PhongExponent>
+                </Material>
+                <Material id="5">
+                    <AmbientReflectance>1 1 1</AmbientReflectance>
+                    <DiffuseReflectance>0.5088815689086914 0.048171769827604294 0.021219030022621155</DiffuseReflectance>
+                    <SpecularReflectance>0.0 0.0 0.0</SpecularReflectance>
+                    <PhongExponent>1</PhongExponent>
+                </Material>
+                <Material id="6">
+                    <AmbientReflectance>1 1 1</AmbientReflectance>
+                    <DiffuseReflectance>0.36130690574645996 0.022173849865794182 0.010960100218653679</DiffuseReflectance>
+                    <SpecularReflectance>0.0 0.0 0.0</SpecularReflectance>
+                    <PhongExponent>1</PhongExponent>
+                </Material>
+                <Material id="7">
+                    <AmbientReflectance>1 1 1</AmbientReflectance>
+                    <DiffuseReflectance>0.9734452962875366 0.9130988717079163 0.701102077960968</DiffuseReflectance>
+                    <SpecularReflectance>0.0 0.0 0.0</SpecularReflectance>
+                    <PhongExponent>1</PhongExponent>
+                </Material>
+                <Material id="8">
+                    <AmbientReflectance>1 1 1</AmbientReflectance>
+                    <DiffuseReflectance>0.11193245649337769 0.04970655217766762 0.018500227481126785</DiffuseReflectance>
+                    <SpecularReflectance>0.0 0.0 0.0</SpecularReflectance>
+                    <PhongExponent>1</PhongExponent>
+                </Material>
+                <Material id="9">
+                    <AmbientReflectance>1 1 1</AmbientReflectance>
+                    <DiffuseReflectance>0.799103319644928 0.4178849160671234 0.1620294600725174</DiffuseReflectance>
+                    <SpecularReflectance>0.0 0.0 0.0</SpecularReflectance>
+                    <PhongExponent>1</PhongExponent>
+                </Material>
+                <Material id="10">
+                    <AmbientReflectance>1 1 1</AmbientReflectance>
+                    <DiffuseReflectance>0.7454042434692383 0.7991030812263489 0.10461653769016266</DiffuseReflectance>
+                    <SpecularReflectance>0.0 0.0 0.0</SpecularReflectance>
+                    <PhongExponent>1</PhongExponent>
+                </Material>
+                <Material id="11">
+                    <AmbientReflectance>1 1 1</AmbientReflectance>
+                    <DiffuseReflectance>0.11443539708852768 0.11443538963794708 0.13286834955215454</DiffuseReflectance>
+                    <SpecularReflectance>0.0 0.0 0.0</SpecularReflectance>
+                    <PhongExponent>1</PhongExponent>
+                </Material>
+                <Material id="12">
+                    <AmbientReflectance>1 1 1</AmbientReflectance>
+                    <DiffuseReflectance>0.20155633985996246 0.06480325758457184 0.028426043689250946</DiffuseReflectance>
+                    <SpecularReflectance>0.0 0.0 0.0</SpecularReflectance>
+                    <PhongExponent>1</PhongExponent>
+                </Material>
+                <Material id="13">
+                    <AmbientReflectance>1 1 1</AmbientReflectance>
+                    <DiffuseReflectance>0.3712379038333893 0.6307572722434998 0.7991030216217041</DiffuseReflectance>
+                    <SpecularReflectance>0.5 0.5 0.5</SpecularReflectance>
+                    <PhongExponent>1</PhongExponent>
+                </Material>
+            </Materials>
+            <VertexData>0 0 0</VertexData>
+            <TexCoordData />
+            <Objects>
+                <Mesh id="1" shadingMode="smooth">
+                    <Material>13</Material>
+                    <Faces plyFile="../windmill_smooth_ply_ply/mesh_1.ply" /></Mesh>
+                <Mesh id="2" shadingMode="smooth">
+                    <Material>8</Material>
+                    <Faces plyFile="../windmill_smooth_ply_ply/mesh_2.ply" /></Mesh>
+                <Mesh id="3" shadingMode="smooth">
+                    <Material>8</Material>
+                    <Faces plyFile="../windmill_smooth_ply_ply/mesh_3.ply" /></Mesh>
+                <Mesh id="4" shadingMode="smooth">
+                    <Material>6</Material>
+                    <Faces plyFile="../windmill_smooth_ply_ply/mesh_4.ply" /></Mesh>
+                <Mesh id="5" shadingMode="smooth">
+                    <Material>7</Material>
+                    <Transformations>t1 r1 t2</Transformations>
+                    <Faces plyFile="../windmill_smooth_ply_ply/mesh_5.ply" /></Mesh>
+                <Mesh id="6" shadingMode="smooth">
+                    <Material>11</Material>
+                    <Faces plyFile="../windmill_smooth_ply_ply/mesh_6.ply" /></Mesh>
+                <Mesh id="7" shadingMode="smooth">
+                    <Material>11</Material>
+                    <Faces plyFile="../windmill_smooth_ply_ply/mesh_7.ply" /></Mesh>
+                <Mesh id="8" shadingMode="smooth">
+                    <Material>1</Material>
+                    <Faces plyFile="../windmill_smooth_ply_ply/mesh_8.ply" /></Mesh>
+                <Mesh id="9" shadingMode="smooth">
+                    <Material>1</Material>
+                    <Faces plyFile="../windmill_smooth_ply_ply/mesh_9.ply" /></Mesh>
+                <Mesh id="10" shadingMode="smooth">
+                    <Material>1</Material>
+                    <Faces plyFile="../windmill_smooth_ply_ply/mesh_10.ply" /></Mesh>
+                <Mesh id="11" shadingMode="smooth">
+                    <Material>1</Material>
+                    <Faces plyFile="../windmill_smooth_ply_ply/mesh_11.ply" /></Mesh>
+                <Mesh id="12" shadingMode="smooth">
+                    <Material>1</Material>
+                    <Faces plyFile="../windmill_smooth_ply_ply/mesh_12.ply" /></Mesh>
+                <Mesh id="13" shadingMode="smooth">
+                    <Material>1</Material>
+                    <Faces plyFile="../windmill_smooth_ply_ply/mesh_13.ply" /></Mesh>
+                <Mesh id="14" shadingMode="smooth">
+                    <Material>1</Material>
+                    <Faces plyFile="../windmill_smooth_ply_ply/mesh_14.ply" /></Mesh>
+                <Mesh id="15" shadingMode="smooth">
+                    <Material>2</Material>
+                    <Faces plyFile="../windmill_smooth_ply_ply/mesh_15.ply" /></Mesh>
+                <Mesh id="16" shadingMode="smooth">
+                    <Material>12</Material>
+                    <Transformations>t1 r1 t2</Transformations>
+                    <Faces plyFile="../windmill_smooth_ply_ply/mesh_16.ply" /></Mesh>
+                <Mesh id="17" shadingMode="smooth">
+                    <Material>9</Material>
+                    <Faces plyFile="../windmill_smooth_ply_ply/mesh_17.ply" /></Mesh>
+                <Mesh id="18" shadingMode="smooth">
+                    <Material>12</Material>
+                    <Faces plyFile="../windmill_smooth_ply_ply/mesh_18.ply" /></Mesh>
+                <Mesh id="19" shadingMode="smooth">
+                    <Material>5</Material>
+                    <Faces plyFile="../windmill_smooth_ply_ply/mesh_19.ply" /></Mesh>
+                <Mesh id="20" shadingMode="smooth">
+                    <Material>4</Material>
+                    <Faces plyFile="../windmill_smooth_ply_ply/mesh_20.ply" /></Mesh>
+                <Mesh id="21" shadingMode="smooth">
+                    <Material>3</Material>
+                    <Faces plyFile="../windmill_smooth_ply_ply/mesh_21.ply" /></Mesh>
+                <Mesh id="22" shadingMode="smooth">
+                    <Material>12</Material>
+                    <Faces plyFile="../windmill_smooth_ply_ply/mesh_22.ply" /></Mesh>
+            </Objects>
+        </Scene>
+    

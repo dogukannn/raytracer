@@ -153,7 +153,8 @@ inline bool triangle::hit(const ray& r, double tMin, double tMax, hitRecord& rec
     if(_model)
     {
 		rec.normal = unit(to_vec3((_model->transpose().inverse()) * vec4(normal, 0.0f)));
-
+		if (!rec.frontFace)
+			rec.normal = -rec.normal;
 #ifdef RECALC_NORMAL
 		vec3 tv0 = p1;
 		vec3 tv1 = p2;

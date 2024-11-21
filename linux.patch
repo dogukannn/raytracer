@@ -1,0 +1,731 @@
+diff --git a/Source/Include/camera.h b/Source/Include/camera.h
+index 1f3ed29..96d66a1 100644
+--- a/Source/Include/camera.h
++++ b/Source/Include/camera.h
+@@ -20,12 +20,22 @@ struct camera
+ 	       double aperture,
+ 	       double focusDist)
+ 	{
++		//auto theta = degreesToRadians(vfov);
++		//auto h = tan(theta / 2);
++		//double viewportHeight = 2.0 * h;
++		//double viewportWidth = aspectRatio * viewportHeight;
++
++
++		//double viewportHeight = 2.0 * h;
++		//double viewportWidth = aspectRatio * viewportHeight;
+ 
+ 		w = unit(lookfrom - lookat);
+ 		u = unit(cross(vup, w));
+ 		v = cross(w, u);
+ 
+ 		origin = lookfrom;
++		//horizontal = focusDist * (near_plane.y - near_plane.x) * u;
++		//vertical = focusDist *  (near_plane.w - near_plane.z) * v;
+ 		horizontal = (near_plane.y - near_plane.x) * u;
+ 		vertical = (near_plane.w - near_plane.z) * v;
+ 		lowerLeftCorner = origin - (horizontal / 2.0) - (vertical / 2.0) - focusDist * w;
+@@ -35,6 +45,10 @@ struct camera
+ 
+ 	ray getRay(float s, float t) const
+ 	{
++		//vec3 rd = lensRadius * randomInUnitSphere();
++		//vec3 offset = u * rd.x() + v * rd.y();
++		//return ray(origin + offset,  lowerLeftCorner + s * horizontal + t * vertical - origin - offset);
++
+ 		return ray(origin,  unit(lowerLeftCorner + s * horizontal + t * vertical - origin));
+ 
+ 	}
+diff --git a/Source/Include/common.h b/Source/Include/common.h
+index 48a7e50..11a5323 100644
+--- a/Source/Include/common.h
++++ b/Source/Include/common.h
+@@ -2,10 +2,12 @@
+ 
+ #include <cmath>
+ #include <limits>
++#include <cfloat>     
+ #include <memory>
+ 
+ 
+-const float infinity = std::numeric_limits<float>::infinity();
++//const float infinity = std::numeric_limits<float>::infinity();
++const float infinity = FLT_MAX;
+ const float pi = 3.1415926535897932385f;
+ 
+ inline double degreesToRadians(double degrees)
+diff --git a/Source/Include/material.h b/Source/Include/material.h
+index 28151f2..f58cb9b 100644
+--- a/Source/Include/material.h
++++ b/Source/Include/material.h
+@@ -98,7 +98,84 @@ struct basic : public material
+ 	basic* as_basic() override { return this; }
+ 
+ 	basic(const color &a, const color &d, const color &s) : material(a, d, s) {}
++
++	//color calc_color(const ray& r_in, const hitRecord& rec, const scene_list& scene, const camera& cam) const override
++	//{
++	//}
+ };
+ 
++//struct lambertian : public material
++//{
++//	color albedo;
++//
++//	lambertian(const color &a) : albedo(a) {}
++//
++//	bool scatter(const ray& r_in, const hitRecord& rec, color& attenuation, ray& scattered) const override
++//	{
++//		auto scatterDirection = rec.normal + randomUnitVector();
++//		if (scatterDirection.nearZero())
++//			scatterDirection = rec.normal;
++//		
++//		scattered = ray(rec.p, scatterDirection);
++//		attenuation = albedo;
++//		return true;
++//	}
++//};
++//
++//struct metal : public material
++//{
++//	color albedo;
++//	double fuzz;
++//
++//	metal(const color &a, double f) : albedo(a), fuzz(f < 1 ? f : 1) {}
++//
++//	bool scatter(const ray& r_in, const hitRecord& rec, color& attenuation, ray& scattered) const override
++//	{
++//		vec3 reflected = reflect(unit(r_in.direction()), rec.normal);
++//		scattered = ray(rec.p, reflected + fuzz * randomInUnitSphere());
++//		attenuation = albedo;
++//		return true;
++//	}
++//};
++//
++//struct dielectric : public material
++//{
++//	double ir;
++//
++//	dielectric(double indexOfReclection) : ir(indexOfReclection) {}
++//
++//	bool scatter(const ray& r_in, const hitRecord& rec, color& attenuation, ray& scattered) const override
++//	{
++//		attenuation = color(1.0, 1.0, 1.0);
++//		double refractionRatio = rec.frontFace ? (1.0 / ir) : ir;
++//
++//		vec3 unitDirection = unit(r_in.direction());
++//		double cos_theta = fmin(dot(-unitDirection, rec.normal), 1.0);
++//		double sin_theta = sqrt(1.0 - cos_theta*cos_theta);
++//
++//		bool cannot_refract = refractionRatio * sin_theta > 1.0;
++//		vec3 direction;
++//
++//		if (cannot_refract || reflectance(cos_theta, refractionRatio) > randomDouble())
++//			direction = reflect(unitDirection, rec.normal);
++//		else
++//			direction = refract(unitDirection, rec.normal, refractionRatio);
++//
++//            scattered = ray(rec.p, direction);
++//
++//		scattered = ray(rec.p, direction);
++//
++//		return true;
++//	}
++//
++//	 private:
++//        static double reflectance(double cosine, double ref_idx) {
++//            auto r0 = (1-ref_idx) / (1+ref_idx);
++//            r0 = r0*r0;
++//            return r0 + (1-r0)*pow((1 - cosine),5);
++//        }
++//};
++
++
+ 
+ 
+diff --git a/Source/Include/scene_list.h b/Source/Include/scene_list.h
+index fc359bf..b68e638 100644
+--- a/Source/Include/scene_list.h
++++ b/Source/Include/scene_list.h
+@@ -22,14 +22,29 @@ struct scene_list : public hittable
+ 	bool hit(const ray& r, double tMin, double tMax, hitRecord& rec, mat4* model) const override;
+ };
+ 
++
++void printMatrixPretty(const mat4& matrix) {
++    for (int i = 0; i < 4; ++i) {
++        for (int j = 0; j < 4; ++j) {
++            std::cout << matrix[i][j] << " ";
++        }
++        std::cout << std::endl;
++    }
++}
++
+ inline bool scene_list::hit(const ray& r, double tMin, double tMax, hitRecord& rec, mat4* model) const
+ {
+ 	hitRecord tmpRec;
+ 	bool hitAnything = false;
+ 	auto closestSoFar = tMax;
+ 
++	//std::cout << "tmax " << tMax << std::endl;
++
+ 	for(auto&& object : objects)
+ 	{
++		//print object->model pretty
++		//printMatrixPretty(object->model);
++
+ 		//convert ray accoring to the model matrix
+ 		auto invModel = object->model.inverse();
+ 		ray newRay = r;
+diff --git a/Source/Include/triangle.h b/Source/Include/triangle.h
+index c6c402c..51df477 100644
+--- a/Source/Include/triangle.h
++++ b/Source/Include/triangle.h
+@@ -5,10 +5,6 @@
+ #include "hittable.h"
+ #include "vec3.h"
+ 
+-//#define RECALC_NORMAL
+-#define HIT_BARYCENTRIC
+-//#define HIT_MOLLER_TRUMBORE
+-
+ 
+ struct triangle : public hittable
+ {
+@@ -32,81 +28,146 @@ struct triangle : public hittable
+ 	bool hit(const ray& r, double tMin, double tMax, hitRecord& rec, mat4* model) const override;
+ };
+ 
+-#ifdef HIT_MOLLER_TRUMBORE
+-inline bool triangle::hit(const ray& r, double tMin, double tMax, hitRecord& rec, mat4* _model) const
+-{
+-    // Triangle vertices
+-    const vec3& v0 = p1;
+-    const vec3& v1 = p2;
+-    const vec3& v2 = p3;
+-
+-    // Edge vectors of the triangle
+-    vec3 edge1 = v1 - v0;
+-    vec3 edge2 = v2 - v0;
+-
+-    // Calculate the determinant
+-    vec3 h = cross(r.direction(), edge2);
+-    double a = dot(edge1, h);
+-
+-    // Check if the ray is parallel to the triangle plane (determinant close to zero)
+-    if (fabs(a) < 1e-8)
+-        return false;
+-
+-    double f = 1.0 / a;
+-    vec3 s = r.origin() - v0;
+-    double u = f * dot(s, h);
+-
+-    // Check if the intersection lies outside the triangle
+-    if (u < 0.0 || u > 1.0)
+-        return false;
+-
+-    vec3 q = cross(s, edge1);
+-    double v = f * dot(r.direction(), q);
+-
+-    // Check if the intersection lies outside the triangle
+-    if (v < 0.0 || u + v > 1.0)
+-        return false;
+-
+-    // Calculate the distance t along the ray to the intersection point
+-    double t = f * dot(edge2, q);
+-
+-    // Check if the intersection point is within the acceptable t range
+-    if (t < tMin || t > tMax)
+-        return false;
+-
+-    // Update the hit record with the intersection information
+-    rec.t = t;
+-    if(_model)
+-		rec.p = to_vec3((*_model * vec4(r.at(rec.t), 1.0f)));
+-    else
+-		rec.p = r.at(rec.t);
+-
+ 
+-    vec3 outwardNormal = unit(cross(edge1, edge2));  // Normal of the triangle\
+-
+-    rec.setFaceNormal(r, outwardNormal);
+-    if(_model)
+-		rec.normal = unit(to_vec3((_model->transpose().inverse()) * vec4(outwardNormal, 0.0f)));
++//inline bool triangle::hit(const ray& r, double tMin, double tMax, hitRecord& rec) const
++//{
++//	assert(r.direction().length() < 1.001 && r.direction().length() > 0.99 );  // Ensure the ray direction is normalized (unit length
++//	
++//	// Triangle vertices
++//    const vec3& v0 = p1;
++//	const vec3& v1 = p2;
++//    const vec3& v2 = p3;
++//
++//    // Edge vectors of the triangle
++//    vec3 edge1 = v1 - v0;
++//    vec3 edge2 = v2 - v0;
++//
++//    // Calculate the determinant
++//    vec3 h = cross(r.direction(), edge2);
++//    double a = dot(edge1, h);
++//
++//    // Check if the ray is parallel to the triangle plane (determinant close to zero)
++//    if (fabs(a) < 1e-8)
++//        return false;
++//
++//    double f = 1.0 / a;
++//    vec3 s = r.origin() - v0;
++//    double u = f * dot(s, h);
++//
++//    // Check if the intersection lies outside the triangle
++//    if (u < 0.0 || u > 1.0)
++//        return false;
++//
++//    vec3 q = cross(s, edge1);
++//    double v = f * dot(r.direction(), q);
++//
++//    // Check if the intersection lies outside the triangle
++//    if (v < 0.0 || u + v > 1.0)
++//        return false;
++//
++//    // Calculate the distance t along the ray to the intersection point
++//    double t = f * dot(edge2, q);
++//
++//    // Check if the intersection point is within the acceptable t range
++//    if (t < tMin || t > tMax)
++//        return false;
++//
++//    // Update the hit record with the intersection information
++//    rec.t = t;
++//    rec.p = r.at(t);
++//    vec3 outwardNormal = unit(cross(edge1, edge2));  // Normal of the triangle
++//    rec.setFaceNormal(r, outwardNormal);
++//    rec.mat_ptr = mat_ptr;
++//
++//    return true;
++//}
++
++//inline bool triangle::hit(const ray& r, double tMin, double tMax, hitRecord& rec) const {
++//    //assert(r.direction().length() < 1.001 && r.direction().length() > 0.99); // Ensure the ray direction is normalized
++//
++//    const vec3& v0 = p1;
++//    const vec3& v1 = p2;
++//    const vec3& v2 = p3;
++//
++//    // Compute the barycentric coordinates (u, v)
++//    vec3 v0v1 = v1 - v0;
++//    vec3 v0v2 = v2 - v0;
++//    vec3 pvec = cross(r.direction(), v0v2);
++//    double det = dot(v0v1, pvec);
++//
++//    //backface cull
++//	//if (det < 1e-8) return false;
++//
++//
++//    // Ray is parallel to the triangle plane
++//    if (fabs(det) < 1e-8)
++//    {
++//        return false;
++//    }
++//
++//    double invDet = 1.0 / det;
++//    vec3 tvec = r.origin() - v0;
++//    double u = dot(tvec, pvec) * invDet;
++//    if (u < -0.01 || u > 1)
++//    {
++//        return false;
++//    }
++//
++//    vec3 qvec = cross(tvec, v0v1);
++//    double v = dot(r.direction(), qvec) * invDet;
++//    if (v < -0.01 || u + v > 1)
++//    {
++//        return false;
++//    }
++//
++//    // Calculate the distance t along the ray to the intersection point
++//    double t = dot(v0v2, qvec) * invDet;
++//
++//    if (t < tMin || t > tMax)
++//    {
++//        return false;
++//    }
++//
++//    // Update the hit record
++//    rec.t = t;
++//    rec.p = r.at(t);
++//    vec3 outwardNormal = unit(cross(v0v1, v0v2)); 
++//    rec.setFaceNormal(r, outwardNormal);
++//    rec.mat_ptr = mat_ptr;
++//
++//    return true;
++//}
+ 
+-    rec.mat_ptr = mat_ptr;
+-}
+-#endif
+- 
+ 
+-#ifdef HIT_BARYCENTRIC
+ //best results
+ inline bool triangle::hit(const ray& r, double tMin, double tMax, hitRecord& rec, mat4* _model) const {
+     const vec3& v0 = p1;
+     const vec3& v1 = p2;
+     const vec3& v2 = p3;
++
++    
++    //// Compute edges and normal
++    //vec3 v0v1 = v1 - v0;
++    //vec3 v0v2 = v2 - v0;
++    //vec3 normal = cross(v0v1, v0v2);
++
++    //n
++    
++    // Normalize the normal
++    //normal = unit(normal);
+     
+     // First compute intersection with plane
+     double NdotRayDirection = dot(normal, r.direction());
+     
++    //if (fabs(NdotRayDirection) < 1e-8) {
++    //    return false;  // Ray parallel to triangle plane
++    //}
++    
+     double d = -dot(normal, v0);
+     double t = -(dot(normal, r.origin()) + d) / NdotRayDirection;
+     
+     if (t < tMin || t > tMax) {
++     // std::cout << "triangle hit test failed from t bounds tmin " << tMin << " tmax" << tMax << " t" << t << std::endl;
+         return false;
+     }
+     
+@@ -142,43 +203,49 @@ inline bool triangle::hit(const ray& r, double tMin, double tMax, hitRecord& rec
+     
+     // If we passed all tests, update hit record
+     rec.t = t;
++  //  if(_model)
++		//rec.p = to_vec3((*_model * vec4(P, 1.0f)));
++  //  else
++		//rec.p = P;
+ 
+     if(_model)
+ 		rec.p = to_vec3((*_model * vec4(r.at(rec.t), 1.0f)));
+     else
+ 		rec.p = r.at(rec.t);
+ 
+-
+-	rec.setFaceNormal(r, normal);
++	  //rec.setFaceNormal(r, normal);
+     if(_model)
+     {
++  //      auto inv = _model->inverse();
++		//auto tv = inv.transpose();
++        
+ 		rec.normal = unit(to_vec3((_model->transpose().inverse()) * vec4(normal, 0.0f)));
++		//vec3 tv0 = p1;
++		//vec3 tv1 = p2;
++		//vec3 tv2 = p3;
+ 
+-#ifdef RECALC_NORMAL
+-		vec3 tv0 = p1;
+-		vec3 tv1 = p2;
+-		vec3 tv2 = p3;
++		//tv0 = to_vec3(*_model * vec4(tv0, 1.0f));
++		//tv1 = to_vec3(*_model * vec4(tv1, 1.0f));
++		//tv2 = to_vec3(*_model * vec4(tv2, 1.0f));
+ 
+-		tv0 = to_vec3(*_model * vec4(tv0, 1.0f));
+-		tv1 = to_vec3(*_model * vec4(tv1, 1.0f));
+-		tv2 = to_vec3(*_model * vec4(tv2, 1.0f));
++  //  	vec3 tv0v1 = tv1 - tv0;
++		//vec3 tv0v2 = tv2 - tv0;
++		//rec.normal = unit(cross(tv0v1, tv0v2));
+ 
+-    	vec3 tv0v1 = tv1 - tv0;
+-		vec3 tv0v2 = tv2 - tv0;
+-		rec.normal = unit(cross(tv0v1, tv0v2));
++		//ray newRay = r;
++		//vec4 origin = vec4(newRay.origin(), 1.0f);
++		//vec4 direction = vec4(newRay.direction(), 0.0f);
+ 
+-		ray newRay = r;
+-		vec4 origin = vec4(newRay.origin(), 1.0f);
+-		vec4 direction = vec4(newRay.direction(), 0.0f);
++		//vec4 newOrigin = *_model * origin;
++		//vec4 newDirection = *_model * direction;
+ 
+-		vec4 newOrigin = *_model * origin;
+-		vec4 newDirection = *_model * direction;
+ 
++		//newRay = ray(vec3(newOrigin.x(), newOrigin.y(), newOrigin.z()), vec3(newDirection.x(), newDirection.y(), newDirection.z()));
+ 
+-		newRay = ray(vec3(newOrigin.x(), newOrigin.y(), newOrigin.z()), vec3(newDirection.x(), newDirection.y(), newDirection.z()));
++		//rec.frontFace = dot(newRay.direction(), rec.normal) < 0;
++		//rec.normal = rec.frontFace ? rec.normal : -rec.normal;
+ 
+-		rec.frontFace = dot(newRay.direction(), rec.normal) < 0;
+-#endif
++		//rec.normal = rec.frontFace ? rec.normal : -rec.normal;
+     }
+ 
+ 
+@@ -186,4 +253,55 @@ inline bool triangle::hit(const ray& r, double tMin, double tMax, hitRecord& rec
+     
+     return true;
+ }
+-#endif
++
++//inline bool triangle::hit(const ray& r, double tMin, double tMax, hitRecord& rec) const
++//{
++//	const vec3& v0 = p1;
++//	const vec3& v1 = p2;
++//	const vec3& v2 = p3;
++//
++//	vec3 edge1 = v1 - v0;
++//	vec3 edge2 = v2 - v0;
++//
++//	// Calculate the determinant
++//	vec3 h = cross(r.direction(), edge2);
++//	double a = dot(edge1, h);
++//
++//	// Check if the ray is parallel to the triangle plane 
++//	if (fabs(a) < 1e-5)
++//		return false;
++//
++//	// Check for degenerate triangles (optional)
++//	if (cross(edge1, edge2).length() < 1e-5)
++//		return false;
++//
++//	double f = 1.0 / a;
++//	vec3 s = r.origin() - v0;
++//	double u = f * dot(s, h);
++//
++//	if (u < 0.0 || u > 1.0)
++//		return false;
++//
++//	vec3 q = cross(s, edge1);
++//	double v = f * dot(r.direction(), q);
++//
++//	if (v < 0.0 || u + v > 1.0)
++//		return false;
++//
++//	double t = f * dot(edge2, q);
++//
++//	if (t < tMin || t > tMax)
++//		return false;
++//
++//	// Optional: Back-face culling
++//	//if (dot(r.direction(), cross(edge1, edge2)) > 0) 
++//	//     return false; 
++//
++//	rec.t = t;
++//	rec.p = r.at(t);
++//	vec3 outwardNormal = unit(cross(edge1, edge2));
++//	rec.setFaceNormal(r, outwardNormal);
++//	rec.mat_ptr = mat_ptr;
++//
++//	return true;
++//}
+diff --git a/Source/Include/vec3.h b/Source/Include/vec3.h
+index 198a357..b52b21a 100644
+--- a/Source/Include/vec3.h
++++ b/Source/Include/vec3.h
+@@ -291,6 +291,7 @@ struct mat4 {
+         
+         //if (abs(det) < 1e-8f) {
+         //    // Matrix is not invertible
++        //    std::cout << "helpppppppp" << std::endl;
+         //    return mat4(0.0f);
+         //}
+ 
+diff --git a/Source/Main.cpp b/Source/Main.cpp
+index f294f64..fbec399 100644
+--- a/Source/Main.cpp
++++ b/Source/Main.cpp
+@@ -20,7 +20,6 @@
+ #include "Include/bvh.h"
+ #include "Include/stb_image_write.h"
+ 
+-//#define OLD_THREADING
+ 
+ class ThreadPool {
+ public:
+@@ -120,12 +119,6 @@ color RayColor(const ray& r, const scene_list& world, const camera& cam, int dep
+ 		}
+ 		else if (auto diemat = rec.mat_ptr->as_dielectric())
+ 		{
+-
+-			if (!rec.frontFace)
+-			{
+-				rec.normal = -rec.normal;
+-			}
+-
+ 			double refractionRatio = rec.frontFace ? (1.0 / diemat->refraction_index) : diemat->refraction_index;
+ 			auto d = unit(r.direction());
+ 			double cosi = dot(-d, rec.normal);
+@@ -260,6 +253,7 @@ mat4 model_matrix_from_transforms(const std::vector<std::string>& transforms, pa
+ 	mat4 model = mat4(1.0f);
+ 	for(auto transform : transforms)
+ 	{
++		std::cout << transform << " is proccessed" << std::endl;
+ 		if (transform[0] == 't')
+ 		{
+ 			assert(scene.translations.count(transform) > 0);
+@@ -383,14 +377,25 @@ scene_list hittableListFromScene(parser::Scene& scene)
+ 
+ 		auto& mat = scene.materials[tr.material_id-1];
+ 		std::shared_ptr<material> mesh_material = convert_material(mat);
+-		triangle t(p1, p2, p3, mesh_material);
++		auto t = std::make_shared<triangle>(p1, p2, p3, mesh_material);
++		//triangle t(p1, p2, p3, mesh_material);
+ 
+-		t.model = model_matrix_from_transforms(tr.transformations, scene);
++		t->model = model_matrix_from_transforms(tr.transformations, scene);
+ 
+ 		//triangles.push_back(t);
+-		world.add(std::make_shared<triangle>(t));
++		world.add(t);
++		std::cout << "triangle added " << tr.transformations[0] << std::endl;
+ 	}
+ 
++	// if(triangles.size() > 0)
++	// {
++	// 	//build bvh
++	// 	auto bvh = std::make_shared<BVH>();
++	// 	bvh->build(std::move(triangles));
++	// 	world.add(bvh);
++	// }
++
++
+ 	world.ambient_light = to_c(scene.ambient_light);
+ 	for(auto& pl : scene.point_lights)
+ 	{
+@@ -430,7 +435,6 @@ void render_camera(parser::Scene& scene, int camera_idx, scene_list& world)
+ 		vec.resize(imageWidth);
+ 	}
+ 
+-	//debug specific pixel
+ 	//{
+ 	//	color pixelColor(0, 0, 0);
+ 	//	const auto u = (475 + 0.5f) / (imageWidth - 1);
+@@ -440,38 +444,6 @@ void render_camera(parser::Scene& scene, int camera_idx, scene_list& world)
+ 	//	return;
+ 	//}
+ 
+-#ifdef OLD_THREADING
+-std::vector<std::future<void>> threads;
+-	for (int j = imageHeight - 1; j >= 0; j--)
+-	{
+-		for (int i = imageWidth - 1; i >= 0; i--)
+-		{
+-			threads.emplace_back(std::async([i, j, &cam, &world, imageHeight, imageWidth, maxDepth, &img]()
+-				{
+-					color pixelColor(0, 0, 0);
+-					const auto u = (i + 0.5f) / (imageWidth - 1);
+-					const auto v = (j + 0.5f) / (imageHeight - 1);
+-					ray r = cam.getRay(u, v);
+-					pixelColor += RayColor(r, world, cam, maxDepth-1);
+-					img[j][i] = pixelColor;
+-				}));
+-
+-			if(threads.size() > 256)
+-			{
+-				for (auto& thread : threads)
+-				{
+-					thread.wait();
+-				}
+-				threads.clear();
+-				std::cerr << "\r" << static_cast<int>((((imageWidth-i) + (imageHeight - j) * imageWidth) / static_cast<double>(imageHeight * imageWidth)) * 100.0) << "% of rendering is completed         " << std::flush;
+-			}
+-		}
+-	}
+-	for (auto& thread : threads)
+-	{
+-		thread.get();
+-	}
+-#else
+ 	std::vector<std::future<void>> threads;
+ 
+ 	const size_t num_threads = std::thread::hardware_concurrency();
+@@ -513,7 +485,6 @@ std::vector<std::future<void>> threads;
+ 	}
+ 
+ 	pool.wait_all();
+-#endif
+ 	
+ 	//convert img data to raw for saving as png using stb (r g b floats range in 0.0f - 255.99f)
+ 	std::vector<unsigned char> raw;
+diff --git a/Source/bvh.cpp b/Source/bvh.cpp
+index b7bf109..701bf90 100644
+--- a/Source/bvh.cpp
++++ b/Source/bvh.cpp
+@@ -1,8 +1,11 @@
+ #include "Include/bvh.h"
+ 
+-//#define BASIC_SPLIT_EXP
++#define BASIC_SPLIT_EXP
+ 
+ #include <cmath>
++#include <climits>
++#include <cfloat>
++
+ 
+ bool hitAABB(const ray& r, const vec3& bmin, const vec3& bmax)
+ {
+@@ -213,6 +216,8 @@ void BVH::Subdivide(uint32_t nodeIdx)
+ 	split = (0.1f * axis_bins[axis]) * (node.aabb_min[axis] + node.aabb_max[axis]);
+ #endif 
+ 	
++	//float split = (node.aabb_min[axis] + extents[axis]) * 0.5f;
++
+ 	int i = node.first;
+ 	int j = node.first + node.count - 1;
+ 
+diff --git a/Source/parser.cpp b/Source/parser.cpp
+index 95f6ebe..5a5c9dd 100644
+--- a/Source/parser.cpp
++++ b/Source/parser.cpp
+@@ -266,6 +266,16 @@ void parser::Scene::loadFromXml(const std::string &filepath)
+     }
+     stream.clear();
+ 
++	//<Transformations>
++	//<Translation id="1">10 -10 0</Translation>
++	//<Translation id="2">-10 -30 0</Translation>
++	//<Rotation id="1">10 0 0 1</Rotation>
++	//<Rotation id="2">-10 0 0 1</Rotation>
++	//<Scaling id="1">10000 10000 1</Scaling>
++	//<Translation id="3">0 20 0</Translation>
++	//</Transformations>
++	//Get transformations
++
+ 	element = root->FirstChildElement("Transformations");
+     if(element)
+     {
+@@ -278,6 +288,8 @@ void parser::Scene::loadFromXml(const std::string &filepath)
+ 				Vec3f translation_vec;
+ 				stream >> translation_vec.x >> translation_vec.y >> translation_vec.z;
+ 
++				std::cout << "t" << translation_id << std::endl;
++				std::cout << translation_vec.x << " " << translation_vec.y << " " << translation_vec.z << std::endl;
+ 				translation = translation->NextSiblingElement("Translation");
+ 
+ 				translations["t" + std::string(translation_id)] = Translation{translation_vec};
+@@ -293,6 +305,8 @@ void parser::Scene::loadFromXml(const std::string &filepath)
+ 				Vec3f scaling_vec;
+ 				stream >> scaling_vec.x >> scaling_vec.y >> scaling_vec.z;
+ 
++				std::cout << "s" << scaling_id << std::endl;
++				std::cout << scaling_vec.x << " " << scaling_vec.y << " " << scaling_vec.z << std::endl;
+ 				scaling = scaling->NextSiblingElement("Scaling");
+ 
+ 				scalings["s" + std::string(scaling_id)] = Scaling{ scaling_vec };
+@@ -309,6 +323,9 @@ void parser::Scene::loadFromXml(const std::string &filepath)
+ 				Vec3f axis;
+ 				stream >> angle >> axis.x >> axis.y >> axis.z;
+ 
++				std::cout << "r" << rotation_id << std::endl;
++				std::cout << angle << " " << axis.x << " " << axis.y << " " << axis.z << std::endl;
++
+ 				rotation = rotation->NextSiblingElement("Rotation");
+ 
+ 				rotations["r" + std::string(rotation_id)] = Rotation{ angle, axis };

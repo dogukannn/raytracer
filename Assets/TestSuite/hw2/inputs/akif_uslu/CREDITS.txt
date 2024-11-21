@@ -1,0 +1,10 @@
+These scenes are contributed by Akif Uslu, one of our previous students.
+They have been modified by Deniz Sayin (also one of our students and TAs).
+I think the changes include a more efficient vertex representation and
+adding the shadingMode="smooth" flags. Also PLY versions of the trex and
+Roosendaal models were created. You can change "smooth" to "flat" for flat
+surface rendering mode. I've made some minor edits for fixing degenerate
+triangles on some models.
+
+
+I thank to both Akif and Deniz for their valuable contributions.

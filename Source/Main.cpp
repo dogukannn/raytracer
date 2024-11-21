@@ -290,15 +290,19 @@ scene_list hittableListFromScene(parser::Scene& scene)
 
 	std::unordered_map<int, std::shared_ptr<BVH>> bvh_map;
 	std::unordered_map<int, mat4> mesh_model_map;
+	std::unordered_map<int, std::shared_ptr<material>> mat_map;
+
+	std::vector<std::shared_ptr<BVHInstance>> bvh_instances;
 
 	for(auto& [mesh_id, mesh] : scene.meshes)
 	{
-		auto& mat = scene.materials[mesh.material_id-1];
-
-		std::shared_ptr<material> mesh_material = convert_material(mat);
-
+		
+		
 		if (!mesh.is_instance)
 		{
+			auto& mat = scene.materials[mesh.material_id-1];
+			std::shared_ptr<material> mesh_material = convert_material(mat);
+
 			for(auto& face : mesh.faces)
 			{
 				point3 p1 = { scene.vertex_data[face.v0_id-1].x,
@@ -329,7 +333,9 @@ scene_list hittableListFromScene(parser::Scene& scene)
 				bvh_instance->model = model_matrix_from_transforms(mesh.transformations, scene);
 				mesh_model_map[mesh_id] = bvh_instance->model;
 				bvh_instance->mat_ptr = mesh_material;
-				world.add(bvh_instance);
+				mat_map[mesh_id] = mesh_material;
+				//world.add(bvh_instance);
+				bvh_instances.push_back(bvh_instance);
 			}
 			triangles.clear();
 		}
@@ -346,11 +352,29 @@ scene_list hittableListFromScene(parser::Scene& scene)
 			}
 			bvh_map[mesh_id] = bvh_map[mesh.base_mesh_id];
 			mesh_model_map[mesh_id] = bvh_instance->model;
-			bvh_instance->mat_ptr = mesh_material;
-			world.add(bvh_instance);
-		}
-	}
 
+			if(mesh.material_id == -1)
+			{
+				bvh_instance->mat_ptr = mat_map[mesh.base_mesh_id];
+				mat_map[mesh_id] = mat_map[mesh.base_mesh_id];
+			}
+			else
+			{
+				auto& mat = scene.materials[mesh.material_id-1];
+				std::shared_ptr<material> mesh_material = convert_material(mat);
+				bvh_instance->mat_ptr = mesh_material;
+			}
+			//world.add(bvh_instance);
+			bvh_instances.push_back(bvh_instance);
+		}
+		}
+
+	if (bvh_instances.size() > 0)
+	{
+		auto tl_bvh = std::make_shared<TLBVH>();
+		tl_bvh->build(std::move(bvh_instances));
+		world.add(tl_bvh);
+	}
 
 	for(auto& sp : scene.spheres)
 	{
@@ -537,7 +561,7 @@ std::vector<std::future<void>> threads;
 	}
 
 	auto end = std::chrono::steady_clock::now();
-	std::cerr << "Elapsed time in milliseconds: "
+	std::cerr << scene_cam.image_name << " Elapsed time in milliseconds: "
 			<< std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
 			<< " ms" << std::endl;
 
@@ -557,8 +581,41 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
+	//adjust cameras and point lights according to transformations
+	for (auto& cam : scene.cameras)
+	{
+		auto model = model_matrix_from_transforms(cam.transformations, scene);
+		vec3 pos = { cam.position.x, cam.position.y, cam.position.z };
+		vec3 gaze = { cam.gaze.x, cam.gaze.y, cam.gaze.z };
+		vec3 up = { cam.up.x, cam.up.y, cam.up.z };
+
+		pos = to_vec3(model * vec4(pos, 1.0f));
+		gaze = to_vec3(model * vec4(gaze, 0.0f));
+		up = cross(gaze, cross(up, gaze));
+		//up = to_vec3(model * vec4(up, 0.0f));
+
+		gaze = unit(gaze);
+		up = unit(up);
+
+		cam.position = { pos.x(), pos.y(), pos.z() };
+		cam.gaze = { gaze.x(), gaze.y(), gaze.z() };
+		cam.up = { up.x(), up.y(), up.z() };
+	}
+
+	for (auto& pl : scene.point_lights)
+	{
+		auto model = model_matrix_from_transforms(pl.transformations, scene);
+
+		vec3 pos = { pl.position.x, pl.position.y, pl.position.z };
+		pos = to_vec3(model * vec4(pos, 1.0f));
+
+		pl.position = { pos.x(), pos.y(), pos.z() };
+	}
+
 	//world
 	scene_list world = hittableListFromScene(scene);
+
+
 
 	for(int i = 0; i < scene.cameras.size(); i++)
 	{
