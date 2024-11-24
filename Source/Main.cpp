@@ -99,7 +99,7 @@ color beerslaw(double t, color absorp)
 	return color(exp(-t * absorp.x()), exp(-t * absorp.y()), exp(-t * absorp.z()));
 }
 
-color RayColor(const ray& r, const scene_list& world, const camera& cam, int depth)
+color RayColor(ray& r, const scene_list& world, const camera& cam, int depth, float* dist = nullptr)
 {
 
 	if(depth <= 0)
@@ -108,7 +108,7 @@ color RayColor(const ray& r, const scene_list& world, const camera& cam, int dep
 	}
 
 	hitRecord rec;
-	if(world.hit(r, 0.0001, infinity, rec, nullptr))
+	if(world.hit(r, dist ? *dist - 0.001f : 0.001f, infinity, rec, nullptr))
 	{
 		if(auto basicmat = rec.mat_ptr->as_basic())
 		{
@@ -132,6 +132,7 @@ color RayColor(const ray& r, const scene_list& world, const camera& cam, int dep
 			double k = 1.0 - refractionRatio * refractionRatio * (1 - cosi * cosi);
 			if (k < 0)
 			{
+
 				color ber = color(1,1,1);
 				hitRecord refrec;
 				if(world.hit(ray(rec.p, unit(diemat->reflected_ray(r, rec).direction())), 0.001, infinity, refrec, nullptr))
@@ -144,6 +145,19 @@ color RayColor(const ray& r, const scene_list& world, const camera& cam, int dep
 			//vec3 refractdir = d * refractionRatio + rec.normal * (refractionRatio * cosi - sqrt(k));
 			vec3 refractdir = (d + rec.normal * cosi) * refractionRatio - rec.normal * cosph;
 			refractdir = unit(refractdir);
+
+			if(diemat->has_roughness)
+			{
+
+				auto r = unit(refractdir);
+				auto rp = create_non_colinear_vector(r);
+				auto u = unit(cross(r, rp));
+				auto v = unit(cross(r, u));
+
+				//auto rr = unit(r + u * roughness * roughness_u_offset + v * roughness * roughness_v_offset);
+				auto rr = unit(r + u * diemat->roughness * ((frandom() - 0.5f) * 1.0f) + v * diemat->roughness * ((frandom() - 0.5f) * 1.0f));
+				refractdir = rr;
+			}
 
 			double n1 = rec.frontFace ? (1.0) : diemat->refraction_index;
 			double n2 = rec.frontFace ? (diemat->refraction_index) : 1.0f;
@@ -175,7 +189,7 @@ color RayColor(const ray& r, const scene_list& world, const camera& cam, int dep
 
 			color ber = color(1,1,1);
 			hitRecord refrec;
-			if(world.hit(ray(rec.p, refractdir), 0.001, infinity, refrec, nullptr))
+			if(world.hit(ray(rec.p, refractdir), 0.000001, infinity, refrec, nullptr))
 			{
 				ber = beerslaw(refrec.t, diemat->absorption_coef);
 			}
@@ -185,9 +199,9 @@ color RayColor(const ray& r, const scene_list& world, const camera& cam, int dep
 			
 			return col;
 
-			return diemat->calc_color(r, rec, world, cam)
-				+ frefr * RayColor(ray(rec.p, refractdir), world, cam, depth - 1)
-				+ frefl * RayColor(diemat->reflected_ray(r, rec), world, cam, depth - 1);
+			//return diemat->calc_color(r, rec, world, cam)
+			//	+ frefr * RayColor(ray(rec.p, refractdir), world, cam, depth - 1)
+			//	+ frefl * RayColor(diemat->reflected_ray(r, rec), world, cam, depth - 1);
 		}
 		else if (auto condmat = rec.mat_ptr->as_conductor())
 		{
@@ -252,6 +266,12 @@ std::shared_ptr<material> convert_material(const parser::Material& mat)
 	}
 
 	mesh_material->phong_exponent = mat.phong_exponent;
+
+	if(mat.has_roughness)
+	{
+		mesh_material->has_roughness = true;
+		mesh_material->roughness = mat.roughness;
+	}
 	return mesh_material;
 }
 
@@ -296,8 +316,6 @@ scene_list hittableListFromScene(parser::Scene& scene)
 
 	for(auto& [mesh_id, mesh] : scene.meshes)
 	{
-		
-		
 		if (!mesh.is_instance)
 		{
 			auto& mat = scene.materials[mesh.material_id-1];
@@ -334,8 +352,13 @@ scene_list hittableListFromScene(parser::Scene& scene)
 				mesh_model_map[mesh_id] = bvh_instance->model;
 				bvh_instance->mat_ptr = mesh_material;
 				mat_map[mesh_id] = mesh_material;
-				//world.add(bvh_instance);
-				bvh_instances.push_back(bvh_instance);
+				if (mesh.has_motion_blur)
+				{
+					bvh_instance->has_motion_blur = true;
+					bvh_instance->motion = to_v(mesh.motion);
+				}
+				world.add(bvh_instance);
+				//bvh_instances.push_back(bvh_instance);
 			}
 			triangles.clear();
 		}
@@ -364,8 +387,14 @@ scene_list hittableListFromScene(parser::Scene& scene)
 				std::shared_ptr<material> mesh_material = convert_material(mat);
 				bvh_instance->mat_ptr = mesh_material;
 			}
-			//world.add(bvh_instance);
-			bvh_instances.push_back(bvh_instance);
+
+			if (mesh.has_motion_blur)
+			{
+				bvh_instance->has_motion_blur = true;
+				bvh_instance->motion = to_v(mesh.motion);
+			}
+			world.add(bvh_instance);
+			//bvh_instances.push_back(bvh_instance);
 		}
 		}
 
@@ -418,10 +447,15 @@ scene_list hittableListFromScene(parser::Scene& scene)
 	world.ambient_light = to_c(scene.ambient_light);
 	for(auto& pl : scene.point_lights)
 	{
-		point_light p;
-		p.intensity = to_c(pl.intensity);
-		p.position = to_p(pl.position);
-		world.point_lights.push_back(std::make_shared<point_light>(p));
+		point_light p(to_c(pl.intensity), to_p(pl.position));
+		world.lights.push_back(std::make_shared<point_light>(p));
+	}
+
+	//area lights
+	for(auto& al : scene.area_lights)
+	{
+		area_light a(to_c(al.intensity), to_p(al.position), to_v(al.normal), al.size);
+		world.lights.push_back(std::make_shared<area_light>(a));
 	}
 
 	world.bg_color = to_c(scene.background_color);
@@ -442,10 +476,9 @@ void render_camera(parser::Scene& scene, int camera_idx, scene_list& world)
 	point3 lookat = to_p(scene_cam.gaze) + to_p(scene_cam.position);
 	vec3 vup = to_v(scene_cam.up);
 	auto distToFocus = scene_cam.near_distance;
-	auto aperture = 0.1;
 	double aspectRatio = imageWidth / (float)imageHeight;
 
-	camera cam(lookfrom, lookat, vup, scene_cam.near_plane, aspectRatio, aperture, distToFocus);
+	camera cam(lookfrom, lookat, vup, scene_cam.near_plane, scene_cam.enable_dof, scene_cam.aperture, scene_cam.focus_distance, distToFocus);
 
 	std::vector<std::vector<color>> img;
 	img.resize(imageHeight);
@@ -509,34 +542,50 @@ std::vector<std::future<void>> threads;
     const int num_tiles_y = (imageHeight + TILE_SIZE_Y - 1) / TILE_SIZE_Y;
     const int total_tiles = num_tiles_x * num_tiles_y;
 
-	for (int ty = 0; ty < num_tiles_y; ty++)
+	scene_cam.num_samples = 1;
+
+	for (int ns = 0; ns < scene_cam.num_samples; ns++)
 	{
-		for (int tx = 0; tx < num_tiles_x; tx++)
+		motion_blur_mp = frandom();
+		sample_u_offset = frandom();
+		sample_v_offset = frandom();
+		lens_x_offset = frandom();
+		lens_y_offset = frandom();
+		roughness_u_offset = (frandom() - 0.5f) * 2.0f;
+		roughness_v_offset = (frandom() - 0.5f) * 2.0f;
+		area_light_u_offset = frandom();
+		area_light_v_offset = frandom();
+
+		for (int ty = 0; ty < num_tiles_y; ty++)
 		{
-            int startX = tx * TILE_SIZE_X;
-            int startY = ty * TILE_SIZE_Y;
-            int endX = std::min(startX + TILE_SIZE_X, imageWidth);
-            int endY = std::min(startY + TILE_SIZE_Y, imageHeight);
+			for (int tx = 0; tx < num_tiles_x; tx++)
+			{
+				int startX = tx * TILE_SIZE_X;
+				int startY = ty * TILE_SIZE_Y;
+				int endX = std::min(startX + TILE_SIZE_X, imageWidth);
+				int endY = std::min(startY + TILE_SIZE_Y, imageHeight);
 
-			pool.enqueue([total_tiles, startX, startY, endX, endY, &cam, &world, imageHeight, imageWidth, maxDepth, &img]()
-				{
-					for (int j = endY - 1; j >= startY; j--)
+				pool.enqueue([total_tiles, startX, startY, endX, endY, &cam, &world, imageHeight, imageWidth, maxDepth, &img]()
 					{
-						for (int i = startX; i < endX; i++)
+						for (int j = endY - 1; j >= startY; j--)
 						{
-							color pixelColor(0, 0, 0);
-							const auto u = (i + 0.5f) / (imageWidth);
-							const auto v = (j + 0.5f) / (imageHeight);
-							ray r = cam.getRay(u, v);
-							pixelColor += RayColor(r, world, cam, maxDepth - 1);
-							img[j][i] = pixelColor;
+							for (int i = startX; i < endX; i++)
+							{
+								color pixelColor(0, 0, 0);
+								const auto u = (i + sample_u_offset) / (float)(imageWidth);
+								const auto v = (j + sample_v_offset) / (float)(imageHeight);
+								ray r = cam.getRay(u, v);
+								float length = r.direction().length();
+								r.dir = unit(r.direction());
+								pixelColor += RayColor(r, world, cam, maxDepth - 1, cam.dof_enabled ? nullptr : &length);
+								img[j][i] += pixelColor;
+							}
 						}
-					}
-				});
+					});
+			}
 		}
+		pool.wait_all();
 	}
-
-	pool.wait_all();
 #endif
 	
 	//convert img data to raw for saving as png using stb (r g b floats range in 0.0f - 255.99f)
@@ -549,9 +598,9 @@ std::vector<std::future<void>> threads;
 		{
 			auto& pixelColor = img[j][i];
 			int index = ((imageHeight - j - 1) * imageWidth + i) * 3;
-			raw[index] = static_cast<unsigned char>(clamp(pixelColor.x(), 0.0, 255.999));
-			raw[index + 1] = static_cast<unsigned char>(clamp(pixelColor.y(), 0.0, 255.999));
-			raw[index + 2] = static_cast<unsigned char>(clamp(pixelColor.z(), 0.0, 255.999));
+			raw[index] = static_cast<unsigned char>(clamp(pixelColor.x() / scene_cam.num_samples, 0.0, 255.999));
+			raw[index + 1] = static_cast<unsigned char>(clamp(pixelColor.y() / scene_cam.num_samples, 0.0, 255.999));
+			raw[index + 2] = static_cast<unsigned char>(clamp(pixelColor.z() / scene_cam.num_samples, 0.0, 255.999));
 		}
 	}
 	

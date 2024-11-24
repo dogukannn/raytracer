@@ -9,7 +9,7 @@
 struct scene_list : public hittable
 {
 	std::vector<std::shared_ptr<hittable>> objects;
-	std::vector<std::shared_ptr<point_light>> point_lights;
+	std::vector<std::shared_ptr<light>> lights;
 	color ambient_light;
 	color bg_color;
 
@@ -31,7 +31,16 @@ inline bool scene_list::hit(const ray& r, double tMin, double tMax, hitRecord& r
 	for(auto&& object : objects)
 	{
 		//convert ray accoring to the model matrix
-		auto invModel = object->model.inverse();
+		auto omodel = object->model;
+
+		if(object->has_motion_blur)
+		{
+			vec3 random_motion = object->motion * motion_blur_mp;
+			mat4 translation = mat4::translate(random_motion.x(), random_motion.y(), random_motion.z());
+			omodel = translation * object->model;
+		}
+
+		auto invModel = omodel.inverse();
 		ray newRay = r;
 		vec4 origin = vec4(newRay.origin(), 1.0f);
 		vec4 direction = vec4(newRay.direction(), 0.0f);
@@ -43,7 +52,7 @@ inline bool scene_list::hit(const ray& r, double tMin, double tMax, hitRecord& r
 
 		//newRay.dir = unit(newRay.direction());
 		
-		if(object->hit(newRay, tMin, closestSoFar, tmpRec, &object->model))
+		if(object->hit(newRay, tMin, closestSoFar, tmpRec, &omodel))
 		{
 			hitAnything = true;
 			closestSoFar = tmpRec.t;

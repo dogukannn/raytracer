@@ -5,7 +5,7 @@
 #include "hittable.h"
 #include "vec3.h"
 
-//#define RECALC_NORMAL
+#define RECALC_NORMAL
 #define HIT_BARYCENTRIC
 //#define HIT_MOLLER_TRUMBORE
 

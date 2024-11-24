@@ -1,0 +1,411 @@
+\documentclass[12pt]{article}
+%\usepackage{alltt}
+%\usepackage{helvet}
+%\usepackage[sfdefault]{roboto}
+\usepackage{amsmath}
+\usepackage[utf8]{inputenc}
+\usepackage[dvips]{graphicx}
+%\usepackage{a4wide}
+\usepackage{epsfig}
+\usepackage{fancybox}
+\usepackage{verbatim}
+\usepackage{array}
+\usepackage{latexsym}
+\usepackage{alltt}
+\usepackage{url}
+\usepackage{color}   % added for colored text
+%\usepackage{fullpage}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{calc}
+\usepackage{enumitem}
+\usepackage[hmargin=3cm,vmargin=5.0cm]{geometry}
+%\topmargin=0cm
+\topmargin=-1.8cm \addtolength{\textheight}{4.5cm}
+\addtolength{\textwidth}{1.0cm}
+%\setlength{\leftmargin}{-5cm}
+\setlength{\oddsidemargin}{0.0cm}
+\setlength{\evensidemargin}{0.0cm}
+
+%\renewcommand{\familydefault}{\sfdefault}
+
+\newcommand{\HRule}{\rule{\linewidth}{1mm}}
+\newcommand{\kutu}[2]{\framebox[#1mm]{\rule[-2mm]{0mm}{#2mm}}}
+\newcommand{\gap}{ \\[1mm] }
+
+\newcommand{\Q}{\raisebox{1.7pt}{$\scriptstyle\bigcirc$}}
+
+\definecolor{amaranth}{rgb}{0.9, 0.17, 0.31}
+\definecolor{gray}{rgb}{0.4,0.4,0.4}
+\definecolor{darkblue}{rgb}{0.0,0.0,0.6}
+\definecolor{cyan}{rgb}{0.0,0.6,0.6}
+\definecolor{red}{rgb}{0.6,0,0}
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+\definecolor{lightblue}{rgb}{0.0,0.0,0.9}
+\definecolor{darkred}{rgb}{0.6,0.0,0.0}
+
+\lstset{
+    %backgroundcolor=\color{lbcolor},
+    tabsize=4,
+    basicstyle=\fontsize{10}{10.3}\selectfont\sffamily,
+    numberstyle=\footnotesize,
+    aboveskip={0.0\baselineskip},
+    belowskip={0.0\baselineskip},
+    columns=fullflexible,
+    breaklines=true,
+    prebreak=\raisebox{0ex}[0ex][0ex]{\ensuremath{\hookleftarrow}},
+    frame=single,
+    showtabs=false,
+    showspaces=false,
+    showstringspaces=false,
+    identifierstyle=\color{amaranth},
+    keywordstyle=\color{rgb}{0,0,1},
+    commentstyle=\color[rgb]{0.133,0.545,0.133},
+    stringstyle=\color{amaranth},
+}
+
+\lstdefinelanguage{XML}
+{
+  morestring=[s][\color{red}]{"}{"},
+  morestring=[s][\color{black}]{>}{<},
+  morecomment=[s]{<?}{?>},
+  morecomment=[s][\color{dkgreen}]{<!--}{-->},
+  %stringstyle=\color{black},
+  identifierstyle=\color{black},
+  keywordstyle=\color{darkblue},
+  commentstyle=\color[rgb]{0.133,0.545,0.133},
+  stringstyle=\color{black},
+  morekeywords={Scene,BackgroundColor,ShadowRayEpsilon,
+  MaxRecursionDepth,Cameras,Camera,Position,Gaze,Up,
+  NearPlane,NearDistance,ImageResolution,ImageName,
+  Material,Materials,VertexData,Mesh,Triangle,Sphere,
+  Faces,Lights,AmbientLight,PointLight,Objects,Indices,
+  AmbientReflectance,DiffuseReflectance,SpecularReflectance,PhongExponent,MirrorReflectance,Intensity,Center,Radius,xmlns,version}% list your attributes here
+}
+
+\begin{document}
+
+\noindent \HRule \\[3mm]
+\small
+\begin{tabular}[b]{lp{1.2cm}r}
+\href{https://www.metu.edu.tr/}{\epsfig{file=metulogo.eps,width=5mm}} Middle East Technical
+University &  &
+\href{https://ceng.metu.edu.tr/information}{\epsfig{file=bmblogo.eps,width=5mm}} Department of Computer Engineering \\
+\end{tabular} \\
+\begin{center}
+
+                 \LARGE \textbf{CENG 795} \\[4mm]
+                 \Large Advanced Ray Tracing \\[4mm]
+                \normalsize Fall 2024 \\
+                    \normalsize Assignment 3 - Multisampling and Distribution Ray Tracing \\
+                    \normalsize (v.1.0)
+\end{center}
+\HRule
+
+\begin{center}
+Due date: November 26, 2024, Sunday, 23:59
+\end{center}
+
+
+\section{Objectives}
+
+In ray tracing, we learn about the actual light distribution in a given
+scene by sampling it using a fixed amount of rays. In the previous
+assignments, we rendered each scene by sending a primary ray through the
+center of each pixel -- i.e. by single sampling. This approach is prone
+to aliasing artifacts and multisampling is a technique that aims to
+mitigate the aliasing problem. In this assignment, you will be
+implementing multisampling and a classical technique called distribution
+ray tracing that aims to add various effects at little cost over
+multisampling. While distribution ray tracing can be implemented
+without multisampling, the results will appear noisy and therefore the
+two techniques are often combined together.
+
+\vspace{0.5cm} \noindent \textbf{Keywords:} \emph{multisampling,
+    aliasing, reconstruction, filtering, distribution ray tracing}
+
+\section{Specifications}
+\begin{enumerate}
+
+\item \textbf{}You should name your executable as ``raytracer''.
+
+\item \textbf{}Your executable will take an XML scene file as argument
+(e.g. ``scene.xml''). A parser will be given to you, so that you do not
+have to worry about parsing the file yourself. The format of the file
+will be explained in Section \ref{sec:sceneFile}. You should be able to
+run your executable via command  ``./raytracer scene.xml''.
+
+\item \textbf{}You will save the resulting images in the PNG format. You
+can use a library of your choice for saving PNG images.
+
+\item \textbf{}The scene file may contain multiple camera
+configurations. You should render as many images as the number of
+cameras. The output filenames for each camera is also specified in the
+XML file.
+
+\item \textbf{}It is expected that you have implemented an acceleration
+structure in the previous assignment. Without this, the rendering times
+with multisampling can be prohibitively long. So make sure your
+acceleration structure works well enough before attempting this
+homework.
+
+\item \textbf{}You should use Blinn-Phong shading model for the specular
+shading computations.  Mirrors and dielectrics should obey Fresnel
+reflection rules.  Dielectrics are assumed to be isotropic and should
+obey Beer's law.
+
+\item \textbf{}You will implement three types of light sources: point,
+ambient, and area light sources. Note that area lights is a new addition
+in this homework. More details about this light source are given below.
+There may be multiple point and area light sources and a single ambient
+light. The values of these lights will be given as (R, G, B) color
+triplets that are \underline{not} restricted to $[0, 255]$ range (however,
+        they cannot be negative as negative light does not make sense).
+Any pixel color value that is calculated by shading computations and is
+greater than 255 must be clamped to 255 and rounded to the nearest
+integer before writing it to the output PNG file. This step will be
+replaced by the application of a tone mapping operator in our later
+homeworks.
+
+\item \textbf{}Point lights will be defined by their intensity (power
+        per unit solid angle). The irradiance due to such a light source
+falls off as inversely proportional to the squared distance from the
+light source. To simulate this effect, you must compute the irradiance
+at a distance of $d$ from a point light as:
+%
+\begin{center}
+$E(d) = \frac{I}{d^2}$,
+\end{center}
+%
+where $I$ is the original light intensity (a triplet of RGB values given
+in the XML file) and $E(d)$ is the irradiance at distance $d$
+from the light source.
+
+\item \textbf{}Area lights will be defined by their area, radiance,
+position, and surface normal direction. See the next section for 
+their detailed description.
+
+
+
+\item \textbf{Back-face culling} is optional as before. Please see
+previous assignment texts for more details.
+
+\end{enumerate}
+
+\section{Scene File}
+\label{sec:sceneFile}
+
+\noindent Please see the previous assignments for a detailed description of the scene file.
+In this section, only the elements introduced in this homework are explained.
+
+\begin{itemize}
+
+\item \textbf{NumSamples:} A child of the Camera element. It defines how
+may samples you need to send through each pixel. Jittered sampling
+(i.e., stratified uniform sampling) is the recommended approach to use.
+Please refer to the lecture slides for a pseudocode of this technique.
+In all scene files, this element is defined as a perfect square (e.g.,
+        $1$, $2$, $4$, $16$, etc.) so that
+you can divide the pixel into equal number of rows and columns.
+
+\item \textbf{ApertureSize:} This element is also a child of the Camera
+element. If it exists, it means you must also pick a sample on the lens
+to create the depth-of-field effect. We assume that the lens is flat
+square that covers the aperture of the camera.  The ``ApertureSize''
+element determines the edge length of this square lens. If you prefer,
+you can implement the aperture as a flat disk, but be careful when
+uniform sampling this disk. In this case, you can take this value as the
+diameter of the disk. Note that the aperture's center position is the camera origin. 
+
+\item \textbf{FocusDistance:} FocusDistance represents the vertical
+distance to an imaginary focal plane. The objects that are on or near
+this plane will appear to be in sharp focus in the final image. Objects
+that are closer or further will appear blurry creating a depth of field
+effect. See distribution\_ray\_tracing\_explained.pdf for a
+visualization of this element.
+
+
+\item \textbf{AreaLight:} Area lights are imaginary squares that provide
+illumination for the scene. They are typically used for effects such as
+soft shadows. An area light is defined by its normal, size (edge length),
+radiance, and position:
+%
+\begin{description}
+\item[\textbf{Position:}] The center point of the area light
+\item[\textbf{Normal:}] The surface normal of the light
+\item[\textbf{Size:}] The edge length of the area light. Its area will be equal
+to the square of this value
+\item[\textbf{Radiance:}] Radiance of the light
+\end{description}
+%
+The orientation of an area light needs to be taken into account
+when computing the light that arrives from it. 
+Although we do not attenuate the \emph{radiance} of this light based on
+the distance (remember that radiance is preserved in vacuum), the
+received energy will still be affected as the area light will cover a
+smaller solid angle based on the distance from it. This relationship is given by:
+%
+\begin{align}
+dw_i = A \frac{\mathbf{n_l} \boldsymbol{\cdot} \mathbf{w_i}}{d^2},
+\end{align}
+%
+where $A$ is the surface area of the area light, $\mathbf{n_l}$ is its surface
+normal, $\mathbf{w_i}$ is the emitted light direction, and $d$ is the distance between the
+sampled point on the light and the intersection point for which we are
+computing the shading. Note that the latter two terms can be different
+for each sample. So while $L_i$ in the rendering equation does not
+change, the product of $L_i dw_i$ changes as a function of distance and
+orientation.  For a more thorough explanation of this
+phenomenon, please refer to areaLight.pdf in the resources folder.
+
+\item \textbf{MotionBlur:} Motion blur simulates the blurry appearance of fast moving objects. It
+is defined for objects using the ``MotionBlur'' element (e.g.
+        dragon\_dynamic.xml). For simplicity motion blur will be assumed
+to be only for translational movements. MotionBlur element defines the
+net translation of the object during which the image capture was
+taking place. We implement this by adding a ``time'' element to our
+rays. You can assume that the object is in its original position
+(computed after applying all of the transformations except the motion
+ blur) at time
+is equal to $0$ and it is in its final position (transformed position plus
+        the motion blur vector) at time is equal to $1$. As each sample
+will have a random time value between $0$ and $1$, the object will
+appear at slightly different positions for each sample creating the
+illusion of a fast moving object. Please see 
+distribution\_ray\_tracing\_explained.pdf for more details.
+
+\item \textbf{Roughness:} A child of the Material element. It defines
+the roughness of the mirrors, conductors, and dielectrics. 
+Roughness is a single scalar value that determines how much
+the reflected (and also refracted in case of dielectrics) ray may deviate from the ideal direction. The
+larger this value, the more rough an object will appear and vice
+versa. In general, we call objects with a smaller roughness to be more
+glossy and polished. Again please see 
+distribution\_ray\_tracing\_explained.pdf for more details.
+
+\end{itemize}
+
+\section{Hints \& Tips}
+In addition to those for the previous homeworks, the following tips may
+be useful for this homework.
+
+\begin{enumerate}
+\item \textbf{} Although the visual results of this homework are quite
+appealing, the implementation of the concepts is not difficult. So do
+not be intimidated by the results.
+
+\item \textbf{} For each ray (i.e. for each sample), you must generate
+$5$ uniform random numbers between $0$ and $1$. Two are for the position
+within a pixel, two for position within the aperture, and one for time.
+To reproduce the shared results, you may use jittered (i.e. stratified) sampling for all
+of these dimensions. You may get better results if you use a low
+discrepancy sequence such as Halton or Hammersley. However,
+the implementation of these sequences are quite tricky as they generate
+samples over the image domain -- not the pixel domain -- and computing
+the desired number of samples for each pixel requires intricate integer
+arithmetic. If you dare to do so, you can use the algorithm defined by
+Grünscho\ss~\cite{grunschloss2012enumerating}. These sequences can also
+be prone to floating point precision artifacts so you should use tiling
+to maintain sufficient precision. For example, you can repeat the pixel
+sample pattern in regions of size $128\times128$ instead of producing a
+single pattern of size image width by height.
+
+\item \textbf{} When you use jittered sampling, make sure that you
+shuffle the samples to avoid correlation between them. For example,
+if pixel sample index $0$ is always from the top-left region of a
+pixel and it samples an area light near the top-left
+region of the light source, you end up with a correlation between pixel
+and light samples. Ideally, a pixel sample that is near the top-left
+corner should be able to sample any position on the area light source.
+This can be achieved by shuffling the samples.
+
+\item \textbf{} You can use the Mersenne Twister algorithm for random
+number generation, which fortunately is implemented in 
+C++ standard template library. The usage of this library to generate a
+uniform random number in range $[0, 1)$ is illustrated below:
+
+\begin{verbatim}
+std::mt19937 gRandomGenerator;
+std::uniform_real_distribution<> gNURandomDistribution(0, 1);
+float psi = gNURandomDistribution(gRandomGenerator);
+\end{verbatim}
+
+\end{enumerate}
+
+\section{Bonus}
+
+I will be more than happy to give bonus points to students who
+make important contributions such as new scenes, importers/exporters
+between our XML format and other standard file formats. Note that a
+Blender
+exporter\footnote{\url{https://saksagan.ceng.metu.edu.tr/courses/ceng477/student/ceng477exporter.py}},
+which exports Blender data to our XML format, was written by one of our
+previous students. You can use this for designing a scene in Blender and
+exporting it to our file format.
+
+\section{Regulations}
+
+\begin{enumerate}
+
+\item \textbf{Programming Language:} C/C++ is the recommended language.
+However, other languages can be used if so desired. In the past, some
+some students used Rust or even Haskell for implementing their ray
+tracers.
+
+\item \textbf{Changing the Sample Codes:} You are free to modify any
+sample code provided with this homework.
+
+\item \textbf{Additional Libraries:} If you are planning to use any
+library other than \textit{(i)} the standard library of the language,
+\textit{(ii)} pthread, \textit{(iii)} the XML parser, and the PNG
+libraries please first ask about
+it on ODTUClass and get a confirmation. Common sense rules apply: if a
+library implements a ray tracing concept that you should be
+implementing yourself, do not use it!
+
+\item \textbf{Submission:} Submission will be done via ODTUClass. 
+To submit, Create a
+``\textbf{tar.gz}''  file  named  ``raytracer.tar.gz'' that
+contains all your source code files and a Makefile. The
+executable should  be  named as  ``raytracer'' and  should  be
+able  to  be  run  using  the following commands (scene.xml
+        will be provided by us during grading):\\
+
+\indent \textbf{tar -xf raytracer.tar.gz}\\
+\indent \textbf{make}\\
+\indent \textbf{./raytracer scene.xml}\\
+
+\noindent Any error in these steps will cause point penalty during
+grading.
+
+\item \textbf{Late Submission:} You can submit your codes up to 3 days
+late. Each late day will cause a 10 point penalty.
+
+\item \textbf{Cheating:} \textbf{We have zero tolerance policy
+for cheating}.  People involved in cheating will be
+punished according to the university regulations and will
+get 0 from the homework. You can discuss algorithmic choices,
+but sharing code between groups or using third party code
+is strictly forbidden. By the nature of this class, many past students
+make their ray tracers publicly available. You must refrain from using
+them at all costs.
+
+\item \textbf{Forum:} Check the ODTUClass forum regularly for
+updates/discussions.
+
+\item \textbf{Evaluation:} The basis of evaluation is your blog posts.
+Please try to create interesting and informative blog posts about your
+ray tracing adventures. You can check out various past blogs for
+inspiration. However, also expect your codes to be compiled and tested
+on some examples for verification purposes. So the images that you share
+in your blog post must directly correspond to your ray tracer outputs.
+
+\end{enumerate}
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+
+\end{document}

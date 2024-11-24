@@ -1,0 +1,5 @@
+This animation was created by Bilgin Coskun, one of our former students.
+The following link explains how you can generate such a fluid dynamic
+simulation using Blender:
+
+https://www.youtube.com/watch?v=DKw0nIOiBOM

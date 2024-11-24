@@ -23,5 +23,8 @@ struct hittable
 {
 	mat4 model;
 
+	bool has_motion_blur = false;
+	vec3 motion;
+
 	virtual bool hit(const ray& r, double tMin, double tMax, hitRecord& rec, mat4* model) const = 0;
 };
