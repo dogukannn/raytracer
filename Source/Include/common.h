@@ -71,11 +71,11 @@ inline float frandom()
 
 inline vec3 create_non_colinear_vector(vec3 v)
 {
-	if(abs(v.x()) < abs(v.y()) && abs(v.x()) < abs(v.z()))
+	if(fabs(v.x()) < fabs(v.y()) && fabs(v.x()) < fabs(v.z()))
 	{
 		return vec3(1.0f, v.y(), v.z());
 	}
-	else if (abs(v.y()) < abs(v.x()) && abs(v.y()) < abs(v.z()))
+	else if (fabs(v.y()) < fabs(v.x()) && fabs(v.y()) < fabs(v.z()))
 	{
 		return vec3(v.x(), 1.0f, v.z());
 	}

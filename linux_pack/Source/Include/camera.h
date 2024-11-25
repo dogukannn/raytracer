@@ -10,17 +10,20 @@ struct camera
 	vec3 horizontal;
 	vec3 vertical;
 	vec3 u, v, w;
-	double lensRadius;
+
+	bool dof_enabled = false;
+	float focusDistance;
+	float aperture;
 
 	camera(point3 lookfrom,
 	       point3 lookat,
 	       vec3 vup,
 	       parser::Vec4f near_plane, 
-	       double aspectRatio,
-	       double aperture,
-	       double focusDist)
+		   bool _dof_enabled,
+	       float _aperture,
+	       float _focusDistance,
+	       float nearDist)
 	{
-
 		w = unit(lookfrom - lookat);
 		u = unit(cross(vup, w));
 		v = cross(w, u);
@@ -28,14 +31,31 @@ struct camera
 		origin = lookfrom;
 		horizontal = (near_plane.y - near_plane.x) * u;
 		vertical = (near_plane.w - near_plane.z) * v;
-		lowerLeftCorner = origin - (horizontal / 2.0) - (vertical / 2.0) - focusDist * w;
+		lowerLeftCorner = origin - (unit(horizontal) * fabs(near_plane.x)) - (unit(vertical) * fabs(near_plane.z)) - nearDist * w;
 
-		lensRadius = aperture / 2;
+		dof_enabled = _dof_enabled;
+		aperture = _aperture;
+		focusDistance = _focusDistance;
 	}
 
-	ray getRay(float s, float t) const
+	ray getRay(float se, float te) const
 	{
-		return ray(origin,  unit(lowerLeftCorner + s * horizontal + t * vertical - origin));
+		if(!dof_enabled)
+			return ray(origin,  lowerLeftCorner + se * horizontal + te * vertical - origin);
 
+		auto q = lowerLeftCorner + se * horizontal + te * vertical;
+		auto s = origin + (aperture * u * lens_x_offset) + (aperture * v * lens_y_offset);
+
+		auto direction = unit(origin - q);
+
+		auto tfd = focusDistance / dot(direction, -w);
+
+		ray r(origin, direction);
+
+		auto p = r.at(tfd);
+
+		auto d = p - s;
+
+		return ray(s, d);
 	}
 };

@@ -31,7 +31,7 @@ struct camera
 		origin = lookfrom;
 		horizontal = (near_plane.y - near_plane.x) * u;
 		vertical = (near_plane.w - near_plane.z) * v;
-		lowerLeftCorner = origin - (unit(horizontal) * abs(near_plane.x)) - (unit(vertical) * abs(near_plane.z)) - nearDist * w;
+		lowerLeftCorner = origin - (unit(horizontal) * fabs(near_plane.x)) - (unit(vertical) * fabs(near_plane.z)) - nearDist * w;
 
 		dof_enabled = _dof_enabled;
 		aperture = _aperture;

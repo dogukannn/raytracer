@@ -99,7 +99,7 @@ color beerslaw(double t, color absorp)
 	return color(exp(-t * absorp.x()), exp(-t * absorp.y()), exp(-t * absorp.z()));
 }
 
-color RayColor(ray& r, const scene_list& world, const camera& cam, int depth, float* dist = nullptr)
+color RayColor(const ray& r, const scene_list& world, const camera& cam, int depth, float* dist = nullptr)
 {
 
 	if(depth <= 0)
@@ -189,7 +189,7 @@ color RayColor(ray& r, const scene_list& world, const camera& cam, int depth, fl
 
 			color ber = color(1,1,1);
 			hitRecord refrec;
-			if(world.hit(ray(rec.p, refractdir), 0.000001, infinity, refrec, nullptr))
+			if(world.hit(ray(rec.p, refractdir), 0.001, infinity, refrec, nullptr))
 			{
 				ber = beerslaw(refrec.t, diemat->absorption_coef);
 			}
@@ -541,8 +541,6 @@ std::vector<std::future<void>> threads;
     const int num_tiles_x = (imageWidth + TILE_SIZE_X - 1) / TILE_SIZE_X;
     const int num_tiles_y = (imageHeight + TILE_SIZE_Y - 1) / TILE_SIZE_Y;
     const int total_tiles = num_tiles_x * num_tiles_y;
-
-	scene_cam.num_samples = 1;
 
 	for (int ns = 0; ns < scene_cam.num_samples; ns++)
 	{

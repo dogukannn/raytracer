@@ -4,10 +4,25 @@
 #include <limits>
 #include <cfloat>     
 #include <memory>
+#include <random>
 
 
 const float infinity = std::numeric_limits<float>::infinity();
 const float pi = 3.1415926535897932385f;
+
+inline float motion_blur_mp = 0.0f;
+
+inline float sample_u_offset = 0.0f;
+inline float sample_v_offset = 0.0f;
+
+inline float lens_x_offset = 0.0f;
+inline float lens_y_offset = 0.0f;
+
+inline float area_light_u_offset = 0.0f;
+inline float area_light_v_offset = 0.0f;
+
+inline float roughness_u_offset = 0.0f;
+inline float roughness_v_offset = 0.0f;
 
 inline double degreesToRadians(double degrees)
 {
@@ -42,8 +57,33 @@ inline double clamp(double x, double min, double max)
 	return x;
 }
 
+inline std::mt19937 gen;
+inline std::uniform_real_distribution<float> dis(0.0f, 1.0f);
+
+inline float frandom()
+{
+	return dis(gen);
+}
+
 #include "ray.h"
 #include "vec3.h"
+
+
+inline vec3 create_non_colinear_vector(vec3 v)
+{
+	if(fabs(v.x()) < fabs(v.y()) && fabs(v.x()) < fabs(v.z()))
+	{
+		return vec3(1.0f, v.y(), v.z());
+	}
+	else if (fabs(v.y()) < fabs(v.x()) && fabs(v.y()) < fabs(v.z()))
+	{
+		return vec3(v.x(), 1.0f, v.z());
+	}
+	else
+	{
+		return vec3(v.x(), v.y(), 1.0f);
+	}
+}
 
 
 

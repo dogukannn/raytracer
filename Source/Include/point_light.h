@@ -34,7 +34,7 @@ struct area_light : public light
 
 	color get_intensity(vec3 wi) const override
 	{
-		return intensity * size * size * abs(dot(normal, -wi));
+		return intensity * size * size * fabs(dot(normal, -wi));
 	}
 	point3 get_position() const override
 	{

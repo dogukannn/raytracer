@@ -12,6 +12,8 @@ struct BVHNode
 	bool is_leaf() const { return count > 0; }
 };
 
+constexpr size_t x = sizeof(BVHNode);
+
 struct BVH
 {
 	std::vector<BVHNode> nodes;
@@ -36,6 +38,22 @@ struct BVHInstance : public hittable
 
 	BVHInstance(std::shared_ptr<BVH> _bvh) : bvh(_bvh) {}
 	BVHInstance(std::shared_ptr<BVH> _bvh, mat4 _model) : bvh(_bvh) { model = _model; }
+
+	bool hit(const ray& r, double tMin, double tMax, hitRecord& rec, mat4* model) const override;
+};
+
+struct TLBVH : public hittable
+{
+	std::vector<BVHNode> nodes;
+	uint32_t rootNodeIdx = 0;
+	uint32_t nodesUsed = 0;
+
+	std::vector<std::shared_ptr<BVHInstance>> bvh_instances;
+	std::vector<uint32_t> bvh_instance_indices;
+
+	void build(std::vector<std::shared_ptr<BVHInstance>>&& _bvh_instances);
+	void UpdateNodeBounds(uint32_t nodeIdx);
+	void Subdivide(uint32_t nodeIdx);
 
 	bool hit(const ray& r, double tMin, double tMax, hitRecord& rec, mat4* model) const override;
 };

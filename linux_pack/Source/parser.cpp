@@ -71,6 +71,58 @@ void parser::Scene::loadFromXml(const std::string &filepath)
     }
     stream >> max_recursion_depth;
 
+
+	element = root->FirstChildElement("Transformations");
+    if(element)
+    {
+		if(auto translation = element->FirstChildElement("Translation"))
+		{
+			while(translation)
+			{
+				auto translation_id = (translation->Attribute("id"));
+				stream << translation->GetText() << std::endl;
+				Vec3f translation_vec;
+				stream >> translation_vec.x >> translation_vec.y >> translation_vec.z;
+
+				translation = translation->NextSiblingElement("Translation");
+
+				translations["t" + std::string(translation_id)] = Translation{translation_vec};
+			}
+		}
+		//get scalings
+		if (auto scaling = element->FirstChildElement("Scaling"))
+		{
+			while(scaling)
+			{
+				auto scaling_id = (scaling->Attribute("id"));
+				stream << scaling->GetText() << std::endl;
+				Vec3f scaling_vec;
+				stream >> scaling_vec.x >> scaling_vec.y >> scaling_vec.z;
+
+				scaling = scaling->NextSiblingElement("Scaling");
+
+				scalings["s" + std::string(scaling_id)] = Scaling{ scaling_vec };
+			}
+		}
+		//get rotations
+		if (auto rotation = element->FirstChildElement("Rotation"))
+		{
+			while (rotation)
+			{
+				auto rotation_id = (rotation->Attribute("id"));
+				stream << rotation->GetText() << std::endl;
+				float angle;
+				Vec3f axis;
+				stream >> angle >> axis.x >> axis.y >> axis.z;
+
+				rotation = rotation->NextSiblingElement("Rotation");
+
+				rotations["r" + std::string(rotation_id)] = Rotation{ angle, axis };
+			}
+		}
+	    
+    }
+
     //Get Cameras
     element = root->FirstChildElement("Cameras");
     element = element->FirstChildElement("Camera");
@@ -127,7 +179,41 @@ void parser::Scene::loadFromXml(const std::string &filepath)
 			camera.image_name = image_name;
 			camera.near_distance = near_distance;
 
+
+			if(child = element->FirstChildElement("NumSamples"))
+			{
+				stream << child->GetText() << std::endl;
+				stream >> camera.num_samples;
+			}
+
+			if(child = element->FirstChildElement("ApertureSize"))
+			{
+				stream << child->GetText() << std::endl;
+				stream >> camera.aperture;
+				camera.enable_dof = true;
+
+				if(child = element->FirstChildElement("FocusDistance"))
+				{
+					stream << child->GetText() << std::endl;
+					stream >> camera.focus_distance;
+				}
+			}
+
+			auto transformations = element->FirstChildElement("Transformations");
+			if (transformations)
+			{
+				std::string transformation;
+				stream << transformations->GetText() << std::endl;
+				while (!(stream >> transformation).eof())
+				{
+					camera.transformations.push_back(transformation);
+					transformation.clear();
+				}
+				stream.clear();
+			}
+
 			cameras.push_back(camera);
+			camera.transformations.clear();
         }
         else
         {
@@ -154,7 +240,42 @@ void parser::Scene::loadFromXml(const std::string &filepath)
 			stream >> camera.image_width >> camera.image_height;
 			stream >> camera.image_name;
 
+			if(child = element->FirstChildElement("ApertureSize"))
+			{
+				stream << child->GetText() << std::endl;
+				stream >> camera.aperture;
+				camera.enable_dof = true;
+
+				if(child = element->FirstChildElement("FocusDistance"))
+				{
+					stream << child->GetText() << std::endl;
+					stream >> camera.focus_distance;
+				}
+			}
+
+			if(child = element->FirstChildElement("NumSamples"))
+			{
+				stream << child->GetText() << std::endl;
+				stream >> camera.num_samples;
+			}
+
+			auto transformations = element->FirstChildElement("Transformations");
+			if (transformations)
+			{
+				std::string transformation;
+				stream << transformations->GetText() << std::endl;
+				while (!(stream >> transformation).eof())
+				{
+					camera.transformations.push_back(transformation);
+					transformation.clear();
+				}
+				stream.clear();
+			}
+
 			cameras.push_back(camera);
+			camera.transformations.clear();
+			camera.num_samples = 1;
+			camera.enable_dof = false;
         }
 
 		element = element->NextSiblingElement("Camera");
@@ -177,8 +298,58 @@ void parser::Scene::loadFromXml(const std::string &filepath)
         stream >> point_light.position.x >> point_light.position.y >> point_light.position.z;
         stream >> point_light.intensity.x >> point_light.intensity.y >> point_light.intensity.z;
 
+		auto transformations = element->FirstChildElement("Transformations");
+		if (transformations)
+		{
+			std::string transformation;
+			stream << transformations->GetText() << std::endl;
+			while (!(stream >> transformation).eof())
+			{
+				point_light.transformations.push_back(transformation);
+				transformation.clear();
+			}
+			stream.clear();
+		}
+
         point_lights.push_back(point_light);
+		point_light.transformations.clear();
         element = element->NextSiblingElement("PointLight");
+    }
+    element = root->FirstChildElement("Lights");
+    element = element->FirstChildElement("AreaLight");
+    AreaLight area_light;
+    while (element)
+    {
+        child = element->FirstChildElement("Position");
+        stream << child->GetText() << std::endl;
+        child = element->FirstChildElement("Normal");
+        stream << child->GetText() << std::endl;
+        child = element->FirstChildElement("Size");
+        stream << child->GetText() << std::endl;
+        child = element->FirstChildElement("Radiance");
+        stream << child->GetText() << std::endl;
+
+        stream >> area_light.position.x >> area_light.position.y >> area_light.position.z;
+        stream >> area_light.normal.x >> area_light.normal.y >> area_light.normal.z;
+        stream >> area_light.size;
+        stream >> area_light.intensity.x >> area_light.intensity.y >> area_light.intensity.z;
+
+		auto transformations = element->FirstChildElement("Transformations");
+		if (transformations)
+		{
+			std::string transformation;
+			stream << transformations->GetText() << std::endl;
+			while (!(stream >> transformation).eof())
+			{
+				area_light.transformations.push_back(transformation);
+				transformation.clear();
+			}
+			stream.clear();
+		}
+
+        area_lights.push_back(area_light);
+		area_light.transformations.clear();
+        element = element->NextSiblingElement("AreaLight");
     }
 
     //Get Materials
@@ -251,8 +422,16 @@ void parser::Scene::loadFromXml(const std::string &filepath)
         if (has_absorption_coef)
 			stream >> material.absorption_coef.x >> material.absorption_coef.y >> material.absorption_coef.z;
 
+		if(child = element->FirstChildElement("Roughness"))
+		{
+			material.has_roughness = true;
+			stream << child->GetText() << std::endl;
+            stream >> material.roughness;
+		}
+
         materials.push_back(material);
         element = element->NextSiblingElement("Material");
+		material.has_roughness = false;
     }
 
     //Get VertexData
@@ -266,57 +445,7 @@ void parser::Scene::loadFromXml(const std::string &filepath)
     }
     stream.clear();
 
-	element = root->FirstChildElement("Transformations");
-    if(element)
-    {
-		if(auto translation = element->FirstChildElement("Translation"))
-		{
-			while(translation)
-			{
-				auto translation_id = (translation->Attribute("id"));
-				stream << translation->GetText() << std::endl;
-				Vec3f translation_vec;
-				stream >> translation_vec.x >> translation_vec.y >> translation_vec.z;
-
-				translation = translation->NextSiblingElement("Translation");
-
-				translations["t" + std::string(translation_id)] = Translation{translation_vec};
-			}
-		}
-		//get scalings
-		if (auto scaling = element->FirstChildElement("Scaling"))
-		{
-			while(scaling)
-			{
-				auto scaling_id = (scaling->Attribute("id"));
-				stream << scaling->GetText() << std::endl;
-				Vec3f scaling_vec;
-				stream >> scaling_vec.x >> scaling_vec.y >> scaling_vec.z;
-
-				scaling = scaling->NextSiblingElement("Scaling");
-
-				scalings["s" + std::string(scaling_id)] = Scaling{ scaling_vec };
-			}
-		}
-		//get rotations
-		if (auto rotation = element->FirstChildElement("Rotation"))
-		{
-			while (rotation)
-			{
-				auto rotation_id = (rotation->Attribute("id"));
-				stream << rotation->GetText() << std::endl;
-				float angle;
-				Vec3f axis;
-				stream >> angle >> axis.x >> axis.y >> axis.z;
-
-				rotation = rotation->NextSiblingElement("Rotation");
-
-				rotations["r" + std::string(rotation_id)] = Rotation{ angle, axis };
-			}
-		}
-	    
-    }
-
+	
 
     //Get Meshes
     element = root->FirstChildElement("Objects");
@@ -325,6 +454,14 @@ void parser::Scene::loadFromXml(const std::string &filepath)
     auto mesh_offset = 0;
     while (element)
     {
+
+        if (child = element->FirstChildElement("MotionBlur"))
+        {
+			mesh.has_motion_blur = true;
+			stream << child->GetText() << std::endl;
+			stream >> mesh.motion.x >> mesh.motion.y >> mesh.motion.z;
+        }
+
         child = element->FirstChildElement("Material");
         stream << child->GetText() << std::endl;
         stream >> mesh.material_id;
@@ -354,11 +491,28 @@ void parser::Scene::loadFromXml(const std::string &filepath)
 			}
 			for (auto& f : fInd)
 			{
-				Face face;
-				face.v0_id = (int)f[0] + 1 + mesh_offset;
-				face.v1_id = (int)f[1] + 1 + mesh_offset;
-				face.v2_id = (int)f[2] + 1 + mesh_offset;
-				mesh.faces.push_back(face);
+                if(f.size() == 3)
+                {
+					Face face;
+					face.v0_id = (int)f[0] + 1 + mesh_offset;
+					face.v1_id = (int)f[1] + 1 + mesh_offset;
+					face.v2_id = (int)f[2] + 1 + mesh_offset;
+					mesh.faces.push_back(face);
+                }
+                if(f.size() == 4)
+                {
+					Face face;
+					face.v0_id = (int)f[0] + 1 + mesh_offset;
+					face.v1_id = (int)f[1] + 1 + mesh_offset;
+					face.v2_id = (int)f[2] + 1 + mesh_offset;
+					mesh.faces.push_back(face);
+
+					Face face2;
+					face2.v0_id = (int)f[0] + 1 + mesh_offset;
+					face2.v1_id = (int)f[2] + 1 + mesh_offset;
+					face2.v2_id = (int)f[3] + 1 + mesh_offset;
+					mesh.faces.push_back(face2);
+                }
 			}
 		}
 		else
@@ -387,9 +541,15 @@ void parser::Scene::loadFromXml(const std::string &filepath)
 			stream.clear();
         }
 
-		meshes[std::stoi(mesh_id)] = mesh;
+        //if(std::stoi(mesh_id) != 6)
+			meshes[std::stoi(mesh_id)] = mesh;
+   //     else{
+			//std::cout << "cxklc" << std::endl;
+   //     }
+
         mesh.faces.clear();
         mesh.transformations.clear();
+		mesh.has_motion_blur = false;
         element = element->NextSiblingElement("Mesh");
     }
     stream.clear();
@@ -401,9 +561,21 @@ void parser::Scene::loadFromXml(const std::string &filepath)
     element = element->FirstChildElement("MeshInstance");
     while (element)
     {
+		if (child = element->FirstChildElement("MotionBlur"))
+        {
+			mesh.has_motion_blur = true;
+			stream << child->GetText() << std::endl;
+			stream >> mesh.motion.x >> mesh.motion.y >> mesh.motion.z;
+        }
+
+        mesh.material_id = -1;
         child = element->FirstChildElement("Material");
-        stream << child->GetText() << std::endl;
-        stream >> mesh.material_id;
+        if (child)
+        {
+			stream << child->GetText() << std::endl;
+			stream >> mesh.material_id;
+        }
+        
 
         auto instance_id = (element->Attribute("id"));
 
@@ -434,6 +606,7 @@ void parser::Scene::loadFromXml(const std::string &filepath)
         mesh.faces.clear();
         mesh.transformations.clear();
         mesh.reset_transform = false;
+		mesh.has_motion_blur = false;
         element = element->NextSiblingElement("MeshInstance");
     }
     stream.clear();
