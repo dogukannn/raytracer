@@ -1464,6 +1464,22 @@ public:
     return result;
   }
 
+  std::vector<std::array<double, 2>> getTextureCoordinates(const std::string& vertexElementName = "vertex") {
+
+    std::vector<double> xPos = getElement(vertexElementName).getProperty<double>("u");
+    std::vector<double> yPos = getElement(vertexElementName).getProperty<double>("v");
+
+    std::vector<std::array<double, 2>> result(xPos.size());
+    for (size_t i = 0; i < result.size(); i++) {
+      result[i][0] = xPos[i];
+      result[i][1] = yPos[i];
+    }
+
+    return result;
+  }
+
+
+
   /**
    * @brief Common-case helper get mesh vertex colors
    *

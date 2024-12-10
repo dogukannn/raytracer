@@ -2,6 +2,7 @@
 
 #include "common.h"
 #include "hittable.h"
+#include "texture.h"
 
 struct hitRecord;
 
@@ -28,14 +29,21 @@ struct conductor;
 
 struct material
 {
-	color ambient_reflectance;
-	color diffuse_reflectance;
-	color specular_reflectance;
+	color m_ambient_reflectance;
+	color m_diffuse_reflectance;
+	color m_specular_reflectance;
 	double phong_exponent = 1.0;
 
 	bool has_roughness = false;
 	float roughness = 0.0f;
 
+	bool blend_diffuse = false;
+	std::shared_ptr<texture> diffuse_map;
+	std::shared_ptr<texture> specular_map;
+	std::shared_ptr<texture> ambient_map;
+	std::shared_ptr<texture> normal_map;
+	std::shared_ptr<texture> bump_map;
+	float bump_factor = 1.0f;
 
 	ray reflected_ray(const ray& r_in, const hitRecord& rec)
 	{
@@ -57,7 +65,7 @@ struct material
 		return ray(rec.p, reflected);
 	}
 
-	material(const color &a, const color &d, const color &s) : ambient_reflectance(a), diffuse_reflectance(d), specular_reflectance(s) {}
+	material(const color &a, const color &d, const color &s) : m_ambient_reflectance(a), m_diffuse_reflectance(d), m_specular_reflectance(s) {}
 
 	virtual basic* as_basic() { return nullptr; }
 	virtual mirror* as_mirror() { return nullptr; }
@@ -65,17 +73,47 @@ struct material
 	virtual conductor* as_conductor() { return nullptr; }
 	virtual color calc_color(const ray& r_in, const hitRecord& rec, const scene_list& scene, const camera& cam) const
 	{
+		color diffuse_reflectance = m_diffuse_reflectance;
+		if (diffuse_map)
+		{
+			auto u = rec.uv.x();
+			auto v = rec.uv.y();
+			diffuse_reflectance = diffuse_map->value(u, v, rec.p);
+			if (blend_diffuse)
+			{
+				diffuse_reflectance = (diffuse_reflectance + m_diffuse_reflectance) * 0.5;
+			}
+		}
+		color specular_reflectance = m_specular_reflectance;
+		if (specular_map)
+		{
+			auto u = rec.uv.x();
+			auto v = rec.uv.y();
+			specular_reflectance = specular_map->value(u, v, rec.p);
+		}
+		color ambient_reflectance = m_ambient_reflectance;
+		if (ambient_map)
+		{
+			auto u = rec.uv.x();
+			auto v = rec.uv.y();
+			ambient_reflectance = ambient_map->value(u, v, rec.p);
+		}
+
 		color res;
 		for(auto& light : scene.lights)
 		{
 
-			auto shadow_ray = ray(rec.p + rec.normal * 0.0001f, unit(light->get_position() - rec.p + rec.normal * 0.0001f));
+			auto shadow_ray = ray(rec.p + rec.normal * 0.001f, unit(light->get_position() - rec.p - rec.normal * 0.001f));
+			if(bump_map)
+			{
+				shadow_ray = ray(rec.nobp+ rec.normal * 0.001f, unit(light->get_position() - rec.nobp - rec.normal * 0.001f));
+			}
 			//shadow_ray.orig += rec.normal * 0.001;
 
 			//shadow_ray.dir = unit(shadow_ray.dir);
 
 			hitRecord srec;
-			if (scene.hit(shadow_ray, 0.000001, (light->get_position() - rec.p).length(), srec, nullptr))
+			if (scene.hit(shadow_ray, 0.001, (light->get_position() - rec.p).length(), srec, nullptr))
 			{
 				continue;
 			}

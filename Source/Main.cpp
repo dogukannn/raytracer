@@ -99,8 +99,9 @@ color beerslaw(double t, color absorp)
 	return color(exp(-t * absorp.x()), exp(-t * absorp.y()), exp(-t * absorp.z()));
 }
 
-color RayColor(const ray& r, const scene_list& world, const camera& cam, int depth, float* dist = nullptr)
+color RayColor(ray& r, const scene_list& world, const camera& cam, int depth, float* dist = nullptr)
 {
+
 
 	if(depth <= 0)
 	{
@@ -110,6 +111,97 @@ color RayColor(const ray& r, const scene_list& world, const camera& cam, int dep
 	hitRecord rec;
 	if(world.hit(r, dist ? *dist - 0.001f : 0.001f, infinity, rec, nullptr))
 	{
+		if(rec.mat_ptr->normal_map)
+		{
+			auto normal = rec.normal;
+			auto tangent = unit(rec.tangent);
+			auto bitangent = unit(rec.bitangent);
+
+			auto uv = rec.uv;
+
+			auto normal_map = rec.mat_ptr->normal_map->value(uv.x(), uv.y(), rec.p);
+			normal_map = unit(2.0f * normal_map - color(1, 1, 1));
+			normal_map = unit(normal_map.x() * tangent + normal_map.y() * bitangent + normal_map.z() * normal);
+
+			rec.normal = normal_map;
+		}
+
+		if(rec.mat_ptr->bump_map && !rec.mat_ptr->bump_map->get_perlin())
+		{
+			auto normal = unit(rec.normal);
+			auto tangent = rec.tangent;
+			auto bitangent = rec.bitangent;
+			auto uv = rec.uv;
+
+			auto bump_value = rec.mat_ptr->bump_map->value(uv.x(), uv.y(), rec.p);
+			//rec.mat_ptr->bump_factor = 0.5f;
+
+			color bump_bottom, bump_left, bump_top, bump_right;
+			rec.mat_ptr->bump_map->area_values(uv.x(), uv.y(), rec.p, bump_top, bump_bottom, bump_left, bump_right);
+			auto k = rec.negate ? -1.0f : 1.0f;
+
+
+			float l0 = bump_value.luminance();
+			float l1 = bump_right.luminance();
+			float l2 = bump_top.luminance();
+
+			rec.nobp = rec.p;
+			//rec.p = rec.p + (rec.frontface ? normal : -normal) * l0;
+
+			//rec.p = rec.p  + rec.normal * l0 * rec.mat_ptr->bump_factor;
+
+			auto delu = 1.0f / (float)rec.mat_ptr->bump_map->width;
+			auto delv = 1.0f / (float)rec.mat_ptr->bump_map->height;
+			//delu = delv;
+
+			//rec.normal = vec3(l1 - l0, l2 - l0, 0.0f) * rec.mat_ptr->bump_factor * normal;
+			//rec.normal = unit(rec.normal);
+			auto dqdu = tangent + ((l1 - l0)) * rec.mat_ptr->bump_factor * normal / delu;
+			auto dqdv = bitangent + (k * (l2 - l0)) * rec.mat_ptr->bump_factor * normal / delv;
+
+			rec.normal = unit(cross(dqdv, dqdu));
+			//rec.normal = unit(dqdu)
+
+			if (!rec.frontFace)
+			{
+				rec.normal = -rec.normal;
+			}
+
+			if (rec.negate_normal)
+			{
+				rec.normal = -rec.normal;
+			}
+
+			//return normal * 128.0f + 128.0f;
+			
+		}
+
+		if(rec.mat_ptr->bump_map && rec.mat_ptr->bump_map->get_perlin())
+		{
+			auto perlin_texture = rec.mat_ptr->bump_map->get_perlin();
+
+			auto pv = perlin_texture->value(rec.uv.x(), rec.uv.y(), rec.p).x();
+
+			float eps = 0.0001f;
+			auto dx = perlin_texture->value(rec.uv.x(), rec.uv.y(), rec.p + vec3(eps, 0, 0)) - perlin_texture->value(rec.uv.x(), rec.uv.y(), rec.p);
+			auto dy = perlin_texture->value(rec.uv.x(), rec.uv.y(), rec.p + vec3(0, eps, 0)) - perlin_texture->value(rec.uv.x(), rec.uv.y(), rec.p);
+			auto dz = perlin_texture->value(rec.uv.x(), rec.uv.y(), rec.p + vec3(0, 0, eps)) - perlin_texture->value(rec.uv.x(), rec.uv.y(), rec.p);
+
+			auto normal = unit(rec.normal);
+
+			rec.nobp = rec.p;
+			//rec.p = rec.p + normal * pv;
+
+			auto gradient = vec3(dx.x(), dy.x(), dz.x()) / eps;
+	
+			auto g2 = dot(gradient, normal) * normal;
+			auto g1 = gradient - g2;
+
+			rec.normal = unit(normal - g1);
+		}
+
+
+
 		if(auto basicmat = rec.mat_ptr->as_basic())
 		{
 			return basicmat->calc_color(r, rec, world, cam);
@@ -245,6 +337,11 @@ vec3 to_v(parser::Vec3f v)
 	return { v.x, v.y, v.z };
 }
 
+vec2 to_v(parser::Vec2f v)
+{
+	return { v.x, v.y };
+}
+
 std::shared_ptr<material> convert_material(const parser::Material& mat)
 {
 	std::shared_ptr<material> mesh_material;
@@ -321,22 +418,144 @@ scene_list hittableListFromScene(parser::Scene& scene)
 			auto& mat = scene.materials[mesh.material_id-1];
 			std::shared_ptr<material> mesh_material = convert_material(mat);
 
+			for (auto& texture_id : mesh.texture_ids)
+			{
+				
+				auto& tex = scene.textures[texture_id - 1];
+
+				std::shared_ptr<texture> mesh_texture = std::make_shared<texture>();
+
+				if(!tex.is_perlin)
+				{
+					switch (tex.interpolation)
+					{
+					case parser::interpolation_type::nearest:
+						mesh_texture->sampler_type = sampler::nearest;
+						break;
+					case parser::interpolation_type::bilinear:
+						mesh_texture->sampler_type = sampler::bilinear;
+						break;
+					case parser::interpolation_type::trilinear:
+						mesh_texture->sampler_type = sampler::trilinear;
+						break;
+					default:
+						mesh_texture->sampler_type = sampler::bilinear;
+						break;
+					}
+
+					parser::Image& img = scene.images[tex.image_id - 1];
+					mesh_texture->width = img.width;
+					mesh_texture->height = img.height;
+					mesh_texture->data = (color*)img.data;
+					mesh_texture->normalizer = tex.normalizer;
+					
+				}
+				else
+				{
+					auto p = std::make_shared<perlin>();
+					p->num_octaves = tex.perlin_octave;
+					p->freq = tex.perlin_freq;
+					p->is_linear = tex.is_linear;
+					mesh_texture = p;
+				}
+
+				switch (tex.type)
+				{
+				case parser::texture_type::replace_kd:
+					mesh_material->diffuse_map = mesh_texture;
+					break;
+				case parser::texture_type::replace_ks:
+					mesh_material->specular_map = mesh_texture;
+					break;
+				case parser::texture_type::replace_all:
+					mesh_material->diffuse_map = mesh_texture;
+					mesh_material->specular_map = mesh_texture;
+					mesh_material->ambient_map = mesh_texture;
+					break;
+				case parser::texture_type::replace_normal:
+					mesh_material->normal_map = mesh_texture;
+					break;
+				case parser::texture_type::blend_kd:
+					mesh_material->blend_diffuse = true;
+					mesh_material->diffuse_map = mesh_texture;
+					break;
+				case parser::texture_type::bump_normal:
+					mesh_material->bump_map = mesh_texture;
+					mesh_material->bump_factor = tex.bump_factor;
+					break;
+				}
+
+			}
+
 			for(auto& face : mesh.faces)
 			{
-				point3 p1 = { scene.vertex_data[face.v0_id-1].x,
-								scene.vertex_data[face.v0_id-1].y,
-								scene.vertex_data[face.v0_id-1].z };
+				auto v0_id = face.v0_id + mesh.vertex_offset;
+				auto v1_id = face.v1_id + mesh.vertex_offset;
+				auto v2_id = face.v2_id + mesh.vertex_offset;
 
-				point3 p2 = { scene.vertex_data[face.v1_id-1].x,
-								scene.vertex_data[face.v1_id-1].y,
-								scene.vertex_data[face.v1_id-1].z };
+				point3 p1 = { scene.vertex_data[v0_id - 1].x,
+								scene.vertex_data[v0_id - 1].y,
+								scene.vertex_data[v0_id - 1].z };
 
-				point3 p3 = { scene.vertex_data[face.v2_id-1].x,
-								scene.vertex_data[face.v2_id-1].y,
-								scene.vertex_data[face.v2_id-1].z };
+				point3 p2 = { scene.vertex_data[v1_id - 1].x,
+							scene.vertex_data[v1_id - 1].y,
+								scene.vertex_data[v1_id - 1].z };
 
+				point3 p3 = { scene.vertex_data[v2_id - 1].x,
+								scene.vertex_data[v2_id - 1].y,
+								scene.vertex_data[v2_id - 1].z };
 
 				triangle t(p1, p2, p3, mesh_material);
+
+				t.is_ply = mesh.is_ply;
+
+				auto uv0_id = face.v0_id - 1 + mesh.uv_offset;
+				auto uv1_id = face.v1_id - 1 + mesh.uv_offset;
+				auto uv2_id = face.v2_id - 1 + mesh.uv_offset;
+
+				//check all textures if one of them is not perlin
+				bool should_have_uv = false;
+				for (auto& texture_id : mesh.texture_ids)
+				{
+					auto& tex = scene.textures[texture_id - 1];
+					if (!tex.is_perlin)
+					{
+						should_have_uv = true;
+					}
+				}
+
+				if (mesh.texture_ids.size() > 0 && should_have_uv)
+				{
+					vec2 uv1 = { scene.vertex_uv_data[uv0_id].x
+								, scene.vertex_uv_data[uv0_id].y };
+
+					vec2 uv2 = { scene.vertex_uv_data[uv1_id].x
+						, scene.vertex_uv_data[uv1_id].y };
+
+					vec2 uv3 = { scene.vertex_uv_data[uv2_id].x
+						, scene.vertex_uv_data[uv2_id].y };
+
+					t.uv1 = uv1;
+					t.uv2 = uv2;
+					t.uv3 = uv3;
+				}
+
+				//if(face.v0_id-1 <= scene.vertex_uv_data.size())
+				//{
+				//	vec2 uv1 = { scene.vertex_uv_data[face.v0_id - 1].x
+				//				, scene.vertex_uv_data[face.v0_id - 1].y };
+
+				//	vec2 uv2 = { scene.vertex_uv_data[face.v1_id - 1].x
+				//		, scene.vertex_uv_data[face.v1_id - 1].y };
+
+				//	vec2 uv3 = { scene.vertex_uv_data[face.v2_id - 1].x
+				//		, scene.vertex_uv_data[face.v2_id - 1].y };
+
+				//	t.uv1 = uv1;
+				//	t.uv2 = uv2;
+				//	t.uv3 = uv3;
+				//}
+
 				triangles.push_back(t);
 				//world.add(std::make_shared<triangle>(p1, p2, p3, mesh_material));
 			}
@@ -411,6 +630,74 @@ scene_list hittableListFromScene(parser::Scene& scene)
 
 		auto& mat = scene.materials[sp.material_id-1];
 		std::shared_ptr<material> mesh_material = convert_material(mat);
+
+		for (auto& texture_id : sp.texture_ids)
+		{
+			auto& tex = scene.textures[texture_id - 1];
+
+				std::shared_ptr<texture> mesh_texture = std::make_shared<texture>();
+
+				if(!tex.is_perlin)
+				{
+					switch (tex.interpolation)
+					{
+					case parser::interpolation_type::nearest:
+						mesh_texture->sampler_type = sampler::nearest;
+						break;
+					case parser::interpolation_type::bilinear:
+						mesh_texture->sampler_type = sampler::bilinear;
+						break;
+					case parser::interpolation_type::trilinear:
+						mesh_texture->sampler_type = sampler::trilinear;
+						break;
+					default:
+						mesh_texture->sampler_type = sampler::bilinear;
+						break;
+					}
+
+					parser::Image& img = scene.images[tex.image_id - 1];
+					mesh_texture->width = img.width;
+					mesh_texture->height = img.height;
+					mesh_texture->data = (color*)img.data;
+					mesh_texture->normalizer = tex.normalizer;
+					
+				}
+				else
+				{
+					auto p = std::make_shared<perlin>();
+					p->num_octaves = tex.perlin_octave;
+					p->freq = tex.perlin_freq;
+					p->is_linear = tex.is_linear;
+					mesh_texture = p;
+				}
+
+				switch (tex.type)
+				{
+				case parser::texture_type::replace_kd:
+					mesh_material->diffuse_map = mesh_texture;
+					break;
+				case parser::texture_type::replace_ks:
+					mesh_material->specular_map = mesh_texture;
+					break;
+				case parser::texture_type::replace_all:
+					mesh_material->diffuse_map = mesh_texture;
+					mesh_material->specular_map = mesh_texture;
+					mesh_material->ambient_map = mesh_texture;
+					break;
+				case parser::texture_type::replace_normal:
+					mesh_material->normal_map = mesh_texture;
+					break;
+				case parser::texture_type::blend_kd:
+					mesh_material->blend_diffuse = true;
+					mesh_material->diffuse_map = mesh_texture;
+					break;
+				case parser::texture_type::bump_normal:
+					mesh_material->bump_map = mesh_texture;
+					mesh_material->bump_factor = tex.bump_factor;
+					break;
+				}
+
+		}
 
 		auto sph = std::make_shared<sphere>(c, sp.radius, mesh_material);
 
@@ -541,6 +828,8 @@ std::vector<std::future<void>> threads;
     const int num_tiles_x = (imageWidth + TILE_SIZE_X - 1) / TILE_SIZE_X;
     const int num_tiles_y = (imageHeight + TILE_SIZE_Y - 1) / TILE_SIZE_Y;
     const int total_tiles = num_tiles_x * num_tiles_y;
+
+	//scene_cam.num_samples = 1;
 
 	for (int ns = 0; ns < scene_cam.num_samples; ns++)
 	{

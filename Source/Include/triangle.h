@@ -5,7 +5,7 @@
 #include "hittable.h"
 #include "vec3.h"
 
-//#define RECALC_NORMAL
+#define RECALC_NORMAL
 #define HIT_BARYCENTRIC
 //#define HIT_MOLLER_TRUMBORE
 
@@ -15,9 +15,16 @@ struct triangle : public hittable
 	point3 p1;
 	point3 p2;
 	point3 p3;
+
+	vec2 uv1;
+	vec2 uv2;
+	vec2 uv3;
+
 	vec3 normal;
     vec3 centroid;
 	std::shared_ptr<material> mat_ptr;
+
+	bool is_ply = false;
 
 	triangle() = default;
 	triangle(const point3& p1, const point3& p2, const point3& p3, std::shared_ptr<material> m) :  p1(p1), p2(p2), p3(p3), mat_ptr(m)
@@ -148,6 +155,24 @@ inline bool triangle::hit(const ray& r, double tMin, double tMax, hitRecord& rec
     else
 		rec.p = r.at(rec.t);
 
+	//calculate barycentric coords, and interpolate uv
+	vec3 v0v1 = v1 - v0;
+	vec3 v0v2 = v2 - v0;
+	vec3 v0p = P - v0;
+
+	float d00 = dot(v0v1, v0v1);
+	float d01 = dot(v0v1, v0v2);
+	float d11 = dot(v0v2, v0v2);
+	float d20 = dot(v0p, v0v1);
+	float d21 = dot(v0p, v0v2);
+
+	float denom = d00 * d11 - d01 * d01;
+	float v = (d11 * d20 - d01 * d21) / denom;
+	float w = (d00 * d21 - d01 * d20) / denom;
+	float u = 1.0f - v - w;
+
+	rec.uv = u * uv1 + v * uv2 + w * uv3;
+
 
 	rec.setFaceNormal(r, normal);
     if(_model)
@@ -175,10 +200,25 @@ inline bool triangle::hit(const ray& r, double tMin, double tMax, hitRecord& rec
 		vec4 newOrigin = *_model * origin;
 		vec4 newDirection = *_model * direction;
 
+		//calculate tangent and bitangent
+		vec2 deltaUV1 = uv2 - uv1;
+		vec2 deltaUV2 = uv3 - uv1;
+
+		rec.tangent = (tv0v1 * deltaUV2.y() - tv0v2 * deltaUV1.y()) / (deltaUV1.x() * deltaUV2.y() - deltaUV1.y() * deltaUV2.x());
+		rec.bitangent = (tv0v2 * deltaUV1.x() - tv0v1 * deltaUV2.x()) / (deltaUV1.x() * deltaUV2.y() - deltaUV1.y() * deltaUV2.x());
 
 		newRay = ray(vec3(newOrigin.x(), newOrigin.y(), newOrigin.z()), vec3(newDirection.x(), newDirection.y(), newDirection.z()));
 
 		rec.frontFace = dot(newRay.direction(), rec.normal) < 0;
+
+		if (_model->determinant() < 0.0f)
+		{
+			rec.negate = true;
+		}
+
+		rec.negate_normal = is_ply;
+
+
 #endif
     }
 

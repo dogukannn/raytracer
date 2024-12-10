@@ -7,10 +7,16 @@ struct material;
 struct hitRecord
 {
 	point3 p;
+	point3 nobp;
 	vec3 normal;
 	std::shared_ptr<material> mat_ptr;
 	double t;
 	bool frontFace;
+	vec2 uv;
+	vec3 tangent;
+	vec3 bitangent;
+	bool negate = false;
+	bool negate_normal = false;
 
 	inline void setFaceNormal(const ray &r, const vec3 &outwardNormal)
 	{

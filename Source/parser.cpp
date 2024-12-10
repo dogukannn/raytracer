@@ -8,6 +8,9 @@
 
 #include "Include/common.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "Include/stb_image.h"
+
 void parser::Scene::loadFromXml(const std::string &filepath)
 {
     tinyxml2::XMLDocument file;
@@ -284,8 +287,15 @@ void parser::Scene::loadFromXml(const std::string &filepath)
     //Get Lights
     element = root->FirstChildElement("Lights");
     auto child = element->FirstChildElement("AmbientLight");
-    stream << child->GetText() << std::endl;
-    stream >> ambient_light.x >> ambient_light.y >> ambient_light.z;
+	if(child)
+	{
+		stream << child->GetText() << std::endl;
+		stream >> ambient_light.x >> ambient_light.y >> ambient_light.z;
+	}
+	else
+	{
+		ambient_light = Vec3f{ 0.0f, 0.0f, 0.0f };
+	}
     element = element->FirstChildElement("PointLight");
     PointLight point_light;
     while (element)
@@ -434,17 +444,230 @@ void parser::Scene::loadFromXml(const std::string &filepath)
 		material.has_roughness = false;
     }
 
+	//Get Textures
+	element = root->FirstChildElement("Textures");
+	if(element)
+		element = element->FirstChildElement("Images");
+	if(element)
+		element = element->FirstChildElement("Image");
+	Image image;
+    while (element)
+    {
+		auto image_id= (element->Attribute("id"));
+		stream << element->GetText() << std::endl;
+		std::string image_path;
+		stream >> image_path;
+        //load image
+		image_path = directory + image_path;
+		int width, height, channels;
+		unsigned char* data = stbi_load(image_path.c_str(), &width, &height, &channels, 0);
+		if (!data)
+		{
+			throw std::runtime_error("Error: The image cannot be loaded.");
+		}
+		if (channels != 3 && channels != 4 && channels != 1)
+		{
+			throw std::runtime_error("Error: The image must have 1, 3 or 4 channels.");
+		}
+		if (channels == 3)
+		{
+			image.width = width;
+			image.height = height;
+			image.channels = channels;
+			image.data = new float[width * height * channels];
+			for (int i = 0; i < width * height * channels; i++)
+			{
+				image.data[i] = data[i] / 255.0f;
+			}
+			STBI_FREE(data);
+		}
+		else if (channels == 1)
+		{
+			image.width = width;
+			image.height = height;
+			image.channels = channels;
+			image.data = new float[width * height * 3];
+			for (int i = 0; i < width * height; i++)
+			{
+				image.data[3 * i] = data[i] / 255.0f;
+				image.data[3 * i + 1] = data[i] / 255.0f;
+				image.data[3 * i + 2] = data[i] / 255.0f;
+			}
+			STBI_FREE(data);
+		}
+		else if (channels == 4)
+		{
+			image.width = width;
+			image.height = height;
+			image.channels = 3;
+			image.data = new float[width * height * 3];
+			int k = 0;
+			for (int i = 0; i < width * height * channels; i++)
+			{
+				if(i % 4 == 3)
+				{
+					continue;
+				}
+				image.data[k] = data[i] / 255.0f;
+				k++;
+			}
+			STBI_FREE(data);
+		}
+		images.push_back(image);
+		element = element->NextSiblingElement("Image");
+    }
+
+	element = root->FirstChildElement("Textures");
+	if(element)
+		element = element->FirstChildElement("TextureMap");
+	Texture texture;
+	while (element)
+	{
+		auto texture_id = (element->Attribute("id"));
+		auto type = (element->Attribute("type"));
+		if (strcmp(type, "image") == 0)
+		{
+
+			if(child = element->FirstChildElement("ImageId"))
+			{
+				stream << child->GetText() << std::endl;
+				stream >> texture.image_id;
+			}
+
+			if(child = element->FirstChildElement("DecalMode"))
+			{
+				stream << child->GetText() << std::endl;
+				std::string decal_mode;
+				stream >> decal_mode;
+				if (decal_mode == "replace_kd")
+					texture.type = texture_type::replace_kd;
+				else if (decal_mode == "blend_kd")
+					texture.type = texture_type::blend_kd;
+				else if (decal_mode == "replace_ks")
+					texture.type = texture_type::replace_ks;
+				else if (decal_mode == "replace_background")
+					texture.type = texture_type::replace_background;
+				else if (decal_mode == "replace_normal")
+					texture.type = texture_type::replace_normal;
+				else if (decal_mode == "bump_normal")
+					texture.type = texture_type::bump_normal;
+				else if (decal_mode == "replace_all")
+					texture.type = texture_type::replace_all;
+			}
+
+			if(child = element->FirstChildElement("BumpFactor"))
+			{
+				stream << child->GetText() << std::endl;
+				stream >> texture.bump_factor;
+			}
+
+			if(child = element->FirstChildElement("Normalizer"))
+			{
+				stream << child->GetText() << std::endl;
+				stream >> texture.normalizer;
+			}
+
+
+			if (child = element->FirstChildElement("Interpolation"))
+			{
+				stream << child->GetText() << std::endl;
+				std::string interpolation;
+				stream >> interpolation;
+				if (interpolation == "nearest")
+					texture.interpolation = interpolation_type::nearest;
+				else if (interpolation == "bilinear")
+					texture.interpolation = interpolation_type::bilinear;
+				else if (interpolation == "trilinear")
+					texture.interpolation = interpolation_type::trilinear;
+			}
+		}
+
+		if (strcmp(type, "perlin") == 0)
+		{
+			texture.is_perlin = true;
+
+			if(child = element->FirstChildElement("DecalMode"))
+			{
+				stream << child->GetText() << std::endl;
+				std::string decal_mode;
+				stream >> decal_mode;
+				if (decal_mode == "replace_kd")
+					texture.type = texture_type::replace_kd;
+				else if (decal_mode == "blend_kd")
+					texture.type = texture_type::blend_kd;
+				else if (decal_mode == "replace_ks")
+					texture.type = texture_type::replace_ks;
+				else if (decal_mode == "replace_background")
+					texture.type = texture_type::replace_background;
+				else if (decal_mode == "replace_normal")
+					texture.type = texture_type::replace_normal;
+				else if (decal_mode == "bump_normal")
+					texture.type = texture_type::bump_normal;
+				else if (decal_mode == "replace_all")
+					texture.type = texture_type::replace_all;
+			}
+
+			if (child = element->FirstChildElement("NoiseConversion"))
+			{
+				stream << child->GetText() << std::endl;
+				std::string noiseConversion;
+				stream >> noiseConversion;
+				if (noiseConversion == "linear")
+					texture.is_linear = true;
+			}
+
+			if (child = element->FirstChildElement("NoiseScale"))
+			{
+				stream << child->GetText() << std::endl;
+				stream >> texture.perlin_freq;
+			}
+
+			if (child = element->FirstChildElement("NumOctaves"))
+			{
+				stream << child->GetText() << std::endl;
+				stream >> texture.perlin_octave;
+			}
+
+		}
+		textures.push_back(texture);
+		texture.interpolation = interpolation_type::nearest;
+		texture.bump_factor = 1.0f;
+		texture.normalizer = 255.0f;
+
+		texture.is_perlin = false;
+		texture.is_linear = false;
+		texture.perlin_octave = 1;
+
+		element = element->NextSiblingElement("TextureMap");
+	}
+
     //Get VertexData
     element = root->FirstChildElement("VertexData");
-    stream << element->GetText() << std::endl;
-    Vec3f vertex;
-    while (!(stream >> vertex.x).eof())
-    {
-        stream >> vertex.y >> vertex.z;
-        vertex_data.push_back(vertex);
-    }
-    stream.clear();
+	if(element)
+	{
+		stream << element->GetText() << std::endl;
+		Vec3f vertex;
+		while (!(stream >> vertex.x).eof())
+		{
+			stream >> vertex.y >> vertex.z;
+			vertex_data.push_back(vertex);
+		}
+		stream.clear();
+	}
 
+	//Get TexCoordData
+    element = root->FirstChildElement("TexCoordData");
+	if(element)
+	{
+		stream << element->GetText() << std::endl;
+		Vec2f uv;
+		while (!(stream >> uv.x).eof())
+		{
+			stream >> uv.y;
+			vertex_uv_data.push_back(uv);
+		}
+		stream.clear();
+	}
 	
 
     //Get Meshes
@@ -484,7 +707,18 @@ void parser::Scene::loadFromXml(const std::string &filepath)
 			// Get mesh-style data from the object
 			std::vector<std::array<double, 3>> vPos = plyIn.getVertexPositions();
 			std::vector<std::vector<size_t>> fInd = plyIn.getFaceIndices<size_t>();
+			std::vector<std::array<double, 2>> vTex;
+			if(plyIn.getElement("vertex").hasProperty("u"))
+				vTex = plyIn.getTextureCoordinates();
 
+			mesh.uv_offset = -mesh_offset + vertex_uv_data.size();
+
+			mesh.is_ply = true;
+
+			for (auto& uv : vTex)
+			{
+				vertex_uv_data.push_back(Vec2f{ (float)uv[0], (float)uv[1]});
+			}
 			for (auto& v : vPos)
 			{
 				vertex_data.push_back(Vec3f{ (float)v[0], (float)v[1], (float)v[2] });
@@ -527,6 +761,16 @@ void parser::Scene::loadFromXml(const std::string &filepath)
 			stream.clear();
 		}
 
+		auto vertexOffset = (child->Attribute("vertexOffset"));
+		if (vertexOffset)
+		{
+			mesh.vertex_offset = std::stoi(vertexOffset);
+		}
+		auto textureOffset = (child->Attribute("textureOffset"));
+		if (textureOffset)
+		{
+			mesh.uv_offset = std::stoi(textureOffset);
+		}
 
 		auto transformations = element->FirstChildElement("Transformations");
         if (transformations)
@@ -541,6 +785,19 @@ void parser::Scene::loadFromXml(const std::string &filepath)
 			stream.clear();
         }
 
+		auto textures = element->FirstChildElement("Textures");
+        if (textures)
+        {
+			std::string texture_id;
+            stream << textures->GetText() << std::endl;
+            while (!(stream >> texture_id).eof())
+            {
+				mesh.texture_ids.push_back(std::stoi(texture_id));
+                texture_id.clear();
+            }
+			stream.clear();
+        }
+
         //if(std::stoi(mesh_id) != 6)
 			meshes[std::stoi(mesh_id)] = mesh;
    //     else{
@@ -550,6 +807,10 @@ void parser::Scene::loadFromXml(const std::string &filepath)
         mesh.faces.clear();
         mesh.transformations.clear();
 		mesh.has_motion_blur = false;
+		mesh.texture_ids.clear();
+		mesh.vertex_offset = 0;
+		mesh.uv_offset = 0;
+		mesh.is_ply = false;
         element = element->NextSiblingElement("Mesh");
     }
     stream.clear();
@@ -602,11 +863,26 @@ void parser::Scene::loadFromXml(const std::string &filepath)
 			stream.clear();
         }
 
+		auto textures = element->FirstChildElement("Textures");
+        if (textures)
+        {
+			std::string texture_id;
+            stream << textures->GetText() << std::endl;
+            while (!(stream >> texture_id).eof())
+            {
+				mesh.texture_ids.push_back(std::stoi(texture_id));
+                texture_id.clear();
+            }
+			stream.clear();
+        }
+
+
 		meshes[std::stoi(instance_id)] = mesh;
         mesh.faces.clear();
         mesh.transformations.clear();
         mesh.reset_transform = false;
 		mesh.has_motion_blur = false;
+		mesh.texture_ids.clear();
         element = element->NextSiblingElement("MeshInstance");
     }
     stream.clear();
@@ -639,9 +915,24 @@ void parser::Scene::loadFromXml(const std::string &filepath)
 			stream.clear();
         }
 
+		auto textures = element->FirstChildElement("Textures");
+        if (textures)
+        {
+			std::string texture_id;
+            stream << textures->GetText() << std::endl;
+            while (!(stream >> texture_id).eof())
+            {
+				triangle.texture_ids.push_back(std::stoi(texture_id));
+                texture_id.clear();
+            }
+			stream.clear();
+        }
+
+
 
         triangles.push_back(triangle);
         triangle.transformations.clear();
+		triangle.texture_ids.clear();
         element = element->NextSiblingElement("Triangle");
     }
 
@@ -676,9 +967,22 @@ void parser::Scene::loadFromXml(const std::string &filepath)
 			stream.clear();
         }
 
+		auto textures = element->FirstChildElement("Textures");
+        if (textures)
+        {
+			std::string texture_id;
+            stream << textures->GetText() << std::endl;
+            while (!(stream >> texture_id).eof())
+            {
+				sphere.texture_ids.push_back(std::stoi(texture_id));
+                texture_id.clear();
+            }
+			stream.clear();
+        }
 
         spheres.push_back(sphere);
         element = element->NextSiblingElement("Sphere");
         sphere.transformations.clear();
+		sphere.texture_ids.clear();
     }
 }

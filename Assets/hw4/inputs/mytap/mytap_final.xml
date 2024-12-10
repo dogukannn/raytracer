@@ -1,0 +1,116 @@
+<Scene>
+    <BackgroundColor>125 125 125</BackgroundColor>
+    <ShadowRayEpsilon>1e-3</ShadowRayEpsilon>
+    <MaxRecursionDepth>6</MaxRecursionDepth>
+    <Cameras>
+        <Camera id="1">
+            <Position>5.232500076293945 -5.666950702667236 4.410021781921387</Position>
+            <Gaze>-0.5773380994796753 0.7157089710235596 -0.3929905593395233</Gaze>
+            <Up>-0.24674050509929657 0.3058769106864929 0.9195426106452942</Up>
+            <NearPlane>-1 1 -0.5625 0.5625</NearPlane>
+            <NearDistance>3</NearDistance>
+            <ImageResolution>1920 1080</ImageResolution>
+            <ImageName>mytap_final.png</ImageName>
+            <NumSamples>2</NumSamples>
+        </Camera>
+    </Cameras>
+
+    <Lights>
+        <AmbientLight>10 10 10</AmbientLight>
+        <PointLight id="1">
+            <Position>4.076245307922363 1.0054539442062378 5.903861999511719</Position>
+            <Intensity>3000.0 3000.0 3000.0</Intensity>
+        </PointLight>
+        <PointLight id="2">
+            <Position>-4.076245307922363 1.0054539442062378 5.903861999511719</Position>
+            <Intensity>3000.0 3000.0 3000.0</Intensity>
+        </PointLight>
+    </Lights>
+
+    <Materials>
+        <Material id="1">
+            <AmbientReflectance>0 0 0</AmbientReflectance>
+            <DiffuseReflectance>2.8 2.8 2.8</DiffuseReflectance>
+            <SpecularReflectance>0.0 0.0 0.0</SpecularReflectance>
+            <MirrorReflectance>0.0 0.0 0.0</MirrorReflectance>
+            <PhongExponent>1</PhongExponent>
+        </Material><Material id="2">
+            <AmbientReflectance>1 1 1</AmbientReflectance>
+            <DiffuseReflectance>0.8 0.8 0.8</DiffuseReflectance>
+            <SpecularReflectance>0.5 0.5 0.5</SpecularReflectance>
+            <MirrorReflectance>0.5 0.5 0.5</MirrorReflectance>
+            <PhongExponent>1</PhongExponent>
+        </Material>
+        <Material id="3">
+            <AmbientReflectance>1 1 1</AmbientReflectance>
+            <DiffuseReflectance>0.8 0.8 0.8</DiffuseReflectance>
+            <SpecularReflectance>0.5 0.5 0.5</SpecularReflectance>
+            <MirrorReflectance>0.5 0.5 0.5</MirrorReflectance>
+            <PhongExponent>1</PhongExponent>
+        </Material>
+        <Material id="4" type="conductor">
+            <AmbientReflectance>1 1 1</AmbientReflectance>
+            <DiffuseReflectance>0 0 0</DiffuseReflectance>
+            <SpecularReflectance>0 0 0</SpecularReflectance>
+            <MirrorReflectance>1 0.86 0.57</MirrorReflectance>
+            <RefractionIndex>0.370</RefractionIndex>
+            <AbsorptionIndex>2.820</AbsorptionIndex>
+            <Roughness>0.25</Roughness>
+        </Material>
+        <Material id="5" type="dielectric">
+            <AmbientReflectance>0 0 0</AmbientReflectance>
+            <DiffuseReflectance>0 0 0</DiffuseReflectance>
+            <SpecularReflectance>0 0 0</SpecularReflectance>
+            <AbsorptionCoefficient>0.01 0.01 0.01</AbsorptionCoefficient>
+            <RefractionIndex>1.55</RefractionIndex>
+        </Material>
+        <Material id="6" type="conductor">
+            <AmbientReflectance>1 1 1</AmbientReflectance>
+            <DiffuseReflectance>0 0 0</DiffuseReflectance>
+            <SpecularReflectance>0 0 0</SpecularReflectance>
+            <MirrorReflectance>1 1 1</MirrorReflectance>
+            <RefractionIndex>0.370</RefractionIndex>
+            <AbsorptionIndex>2.820</AbsorptionIndex>
+            <Roughness>0</Roughness>
+        </Material>
+    </Materials>
+
+    <Textures>
+        <Images>
+            <Image id="1">../textures/bathroom.jpg</Image>
+        </Images>
+
+        <TextureMap id="1" type="image">
+            <ImageId>1</ImageId>
+            <Interpolation>trilinear</Interpolation>
+            <DecalMode>replace_kd</DecalMode>
+            <Normalizer>16</Normalizer>
+        </TextureMap>
+
+        <TextureMap id="2" type="image">
+            <ImageId>1</ImageId>
+            <DecalMode>bump_normal</DecalMode>
+            <BumpFactor>0.01</BumpFactor>
+        </TextureMap>
+    </Textures>
+
+    <Objects>
+        <Mesh id="1">
+            <Material>1</Material>
+            <Faces plyFile="mytap_final_ply/tap_room_without_back_wall.ply" />
+        </Mesh>
+        <Mesh id="2">
+            <Material>6</Material>
+            <Textures>1 2</Textures>
+            <Faces plyFile="mytap_final_ply/tap_room_back_wall.ply" />
+        </Mesh>
+        <Mesh id="3" shadingMode="smooth">
+            <Material>4</Material>
+            <Faces plyFile="mytap_final_ply/mesh_2.ply" />
+        </Mesh>
+        <Mesh id="4" shadingMode="smooth">
+            <Material>5</Material>
+            <Faces plyFile="mytap_final_ply/mesh_3.ply" />
+        </Mesh>
+    </Objects>
+</Scene>

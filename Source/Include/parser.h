@@ -15,6 +15,11 @@ namespace parser
         float x, y, z;
     };
 
+    struct Vec2f
+    {
+        float x, y;
+    };
+
     struct Vec3i
     {
         int x, y, z;
@@ -61,6 +66,45 @@ namespace parser
 		std::vector<std::string> transformations;
     };
 
+    struct Image
+	{
+		int width, height, channels;
+		float* data;
+	};
+
+	enum texture_type
+	{
+        replace_kd,
+		blend_kd,
+		replace_ks,
+		replace_background,
+		replace_normal,
+		bump_normal,
+        replace_all,
+	};
+
+	enum interpolation_type
+	{
+		nearest,
+		bilinear,
+		trilinear,
+	};
+
+    struct Texture
+    {
+        uint32_t image_id;
+		texture_type type;
+		float bump_factor = 1.0f;
+		float normalizer = 255.0f;
+
+		bool is_perlin = false;
+		bool is_linear = false;
+		int perlin_octave = 1;
+		float perlin_freq = 1.0f;
+
+		interpolation_type interpolation = interpolation_type::nearest;
+    };
+
     struct Material
     {
         bool is_mirror;
@@ -100,7 +144,14 @@ namespace parser
         int material_id;
         std::vector<Face> faces;
 
+        int vertex_offset = 0;
+		int uv_offset = 0;
+
+        bool is_ply = false;
+
 		std::vector<std::string> transformations;
+
+		std::vector<uint32_t> texture_ids;
     };
 
     struct Triangle
@@ -109,6 +160,8 @@ namespace parser
         Face indices;
 
 		std::vector<std::string> transformations;
+
+        std::vector<uint32_t> texture_ids;
     };
 
     struct Sphere
@@ -118,6 +171,8 @@ namespace parser
         float radius;
 
 		std::vector<std::string> transformations;
+
+        std::vector<uint32_t> texture_ids;
     };
 
     struct Translation
@@ -148,6 +203,7 @@ namespace parser
         std::vector<AreaLight> area_lights;
         std::vector<Material> materials;
         std::vector<Vec3f> vertex_data;
+        std::vector<Vec2f> vertex_uv_data;
 
         std::map<int, Mesh> meshes;
 
@@ -157,6 +213,9 @@ namespace parser
 		std::unordered_map<std::string, Translation> translations;
 		std::unordered_map<std::string, Scaling> scalings;
 		std::unordered_map<std::string, Rotation> rotations;
+
+		std::vector<Image> images;
+		std::vector<Texture> textures;
 
         //Functions
         void loadFromXml(const std::string &filepath);

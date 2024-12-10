@@ -48,6 +48,68 @@ struct vec3i
 
 };
 
+struct vec2
+{
+	float e[2];
+
+	vec2() : e{0,0} {} 
+	vec2(float e0, float e1) : e{e0, e1} {}
+	vec2(float e0) : e{e0, e0} {}
+
+	float x() const { return e[0]; }
+	float y() const { return e[1]; }
+
+	vec2 operator-() const { return vec2(-e[0], -e[1]); }
+	float operator[](int i) const { return e[i]; }
+	float& operator[](int i) { return e[i]; }
+
+	vec2& operator+=(const vec2& v)
+	{
+		e[0] += v.e[0];
+		e[1] += v.e[1];
+		return *this;
+	}
+
+	vec2& operator*=(const float t)
+	{
+		e[0] *= t;
+		e[1] *= t;
+		return *this;
+	}
+
+	vec2& operator/=(const float t)
+	{
+		return *this *= 1 / t;
+	}
+
+	float length() const
+	{
+		return std::sqrt(lengthSquared());
+	}
+
+	float lengthSquared() const
+	{
+		return e[0]*e[0] + e[1]*e[1];
+	}
+
+	inline static vec2 random()
+	{
+		return vec2(randomFloat(), randomFloat());
+	}
+
+	inline static vec2 random(float min, float max)
+	{
+		return vec2(randomFloat(min, max), randomFloat(min, max));
+	}
+
+	bool nearZero() const
+	{
+		const auto s = 1e-8;
+		return (fabs(e[0]) < s) && (fabs(e[1]) < s);
+	}
+};
+
+
 
 struct vec3
 {
@@ -110,6 +172,12 @@ struct vec3
 	{
 		const auto s = 1e-8;
 		return (fabs(e[0]) < s) && (fabs(e[1]) < s) && (fabs(e[2]) < s);
+	}
+
+    float luminance() const
+	{
+		//return (0.2126f * e[0] + 0.7152f * e[1] + 0.0722f * e[2]) * 0.33f;
+		return (e[0] + e[1] + e[2]) / 6.0f;
 	}
 };
 
@@ -445,6 +513,57 @@ struct mat4 {
 
 inline vec3 to_vec3(const vec4& v) {
 	return vec3(v.x(), v.y(), v.z());
+}
+
+
+inline vec2 operator+(const vec2& u, const vec2& v)
+{
+	return vec2(u.e[0] + v.e[0], u.e[1] + v.e[1]);
+}
+
+inline vec2 operator-(const vec2& u, const vec2& v)
+{
+	return vec2(u.e[0] - v.e[0], u.e[1] - v.e[1]);
+}
+
+inline vec2 operator*(const vec2& u, const vec2& v)
+{
+	return vec2(u.e[0] * v.e[0], u.e[1] * v.e[1]);
+}
+
+inline vec2 operator*(float t, const vec2& v)
+{
+	return vec2(t * v.e[0], t * v.e[1]);
+}
+
+inline vec2 operator*(const vec2& v, float t)
+{
+	return t * v;
+}
+
+inline vec2 operator/(vec2 v, float t)
+{
+	return (1 / t) * v;
+}
+
+inline double dot(const vec2& u, const vec2& v)
+{
+	return u.e[0] * v.e[0] + u.e[1] * v.e[1];
+}
+
+inline vec3 to_vec3(const vec2& v)
+{
+	return vec3(v.x(), v.y(), 0);
+}
+
+inline vec2 to_vec2(const vec3& v)
+{
+	return vec2(v.x(), v.y());
+}
+
+inline vec2 to_vec2(const vec4& v)
+{
+	return vec2(v.x(), v.y());
 }
 
 
