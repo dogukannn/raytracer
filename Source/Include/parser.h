@@ -45,6 +45,14 @@ namespace parser
 		float focus_distance = 0.0f;
 		float aperture = 0.0f;
 
+        //tonemap option
+		bool enable_tonemap = false;
+        std::string tmo;
+        float key_value;
+        float burn_percent;
+		float saturation;
+        float gamma;
+
 		std::vector<std::string> transformations;
     };
 
@@ -66,11 +74,41 @@ namespace parser
 		std::vector<std::string> transformations;
     };
 
+    struct SpotLight 
+    {
+        Vec3f position;
+        Vec3f direction;
+        Vec3f intensity;
+		float coverage_angle;
+		float falloff_angle;
+		std::vector<std::string> transformations;
+    };
+
+    struct DirectionalLight 
+    {
+        Vec3f direction;
+        Vec3f intensity;
+    };
+
+
     struct Image
 	{
 		int width, height, channels;
 		float* data;
 	};
+
+	enum sphere_light_type
+	{
+		spherical = 0,
+        latlong,
+	};
+
+    struct SphericalDirectionalLight
+    {
+        uint32_t image_id;
+		sphere_light_type type;
+    };
+
 
 	enum texture_type
 	{
@@ -191,6 +229,11 @@ namespace parser
 		Vec3f rotation;
     };
 
+    struct Composite
+    {
+        float matrix[16];
+    };
+
     struct Scene
     {
         //Data
@@ -201,6 +244,9 @@ namespace parser
         Vec3f ambient_light;
         std::vector<PointLight> point_lights;
         std::vector<AreaLight> area_lights;
+        std::vector<SpotLight> spot_lights;
+		std::vector<DirectionalLight> directional_lights;
+		std::vector<SphericalDirectionalLight> spherical_directional_lights;
         std::vector<Material> materials;
         std::vector<Vec3f> vertex_data;
         std::vector<Vec2f> vertex_uv_data;
@@ -213,6 +259,7 @@ namespace parser
 		std::unordered_map<std::string, Translation> translations;
 		std::unordered_map<std::string, Scaling> scalings;
 		std::unordered_map<std::string, Rotation> rotations;
+		std::unordered_map<std::string, Composite> composites;
 
 		std::vector<Image> images;
 		std::vector<Texture> textures;

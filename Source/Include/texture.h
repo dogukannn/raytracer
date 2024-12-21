@@ -30,10 +30,10 @@ struct texture
 		int i = static_cast<int>(u * width);
 		int j = static_cast<int>(v * height);
 
-		i = std::clamp(i, 0, width - 1);
-		j = std::clamp(j, 0, height - 1);
+		i = clamp(i, 0, width - 1);
+		j = clamp(j, 0, height - 1);
 
-		return data[j * width + i] * (255.0f / normalizer);
+		return data[j * width + i];
 	}
 
 	color bilinear(float u, float v)
@@ -44,8 +44,8 @@ struct texture
 		int i0 = static_cast<int>(i);
 		int j0 = static_cast<int>(j);
 
-		i0 = std::clamp(i0, 0, width - 1);
-		j0 = std::clamp(j0, 0, height - 1);
+		i0 = clamp(i0, 0, width - 1);
+		j0 = clamp(j0, 0, height - 1);
 
 		int i1 = std::min(i0 + 1, width - 1);
 		int j1 = std::min(j0 + 1, height - 1);
@@ -58,7 +58,7 @@ struct texture
 		color c01 = data[j1 * width + i0];
 		color c11 = data[j1 * width + i1];
 
-		return (c00 * (1 - s) * (1 - t) + c10 * s * (1 - t) + c01 * (1 - s) * t + c11 * s * t ) * (255.0f / normalizer);
+		return (c00 * (1 - s) * (1 - t) + c10 * s * (1 - t) + c01 * (1 - s) * t + c11 * s * t );
         //return average
         //return c00;
 		//return (c00 + c10 + c01 + c11) * 0.25f;
@@ -98,8 +98,12 @@ struct texture
 
 	virtual color value(double u, double v, vec3 p)
 	{
+		if (u < 0.0f) u *= -1.0f;
+		if (v < 0.0f) v *= -1.0f;
+
 		u = fmod(u, 1.0);
 		v = fmod(v, 1.0);
+                
 		if (data == nullptr)
 		{
 			throw std::runtime_error("Texture data is null");
@@ -267,7 +271,7 @@ struct perlin : public texture
 
 	virtual color value(double u, double v, vec3 p) override
 	{
-		float noise = generator.noise(p.x(), p.y(), p.z(), num_octaves, freq, is_linear);
+		float noise = generator.noise(p.x, p.y, p.z, num_octaves, freq, is_linear);
         if(is_linear)
 			noise = 1.0f - noise;
 		return color(noise, noise, noise);

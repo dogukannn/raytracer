@@ -13,11 +13,11 @@ struct conductor;
 
 //vec3 create_non_colinear_vector(vec3 v)
 //{
-//	if(abs(v.x()) < abs(v.y()) && abs(v.x()) < abs(v.z()))
+//	if(abs(v.x) < abs(v.y) && abs(v.x) < abs(v.z))
 //	{
 //		return vec3(1.0f, 0.0f, 0.0f);
 //	}
-//	else if (abs(v.y()) < abs(v.x()) && abs(v.y()) < abs(v.z()))
+//	else if (abs(v.y) < abs(v.x) && abs(v.y) < abs(v.z))
 //	{
 //		return vec3(0.0f, 1.0f, 0.0f);
 //	}
@@ -27,12 +27,24 @@ struct conductor;
 //	}
 //}
 
+enum material_type
+{
+	BASIC,
+	MIRROR,
+	DIELECTRIC,
+	CONDUCTOR
+};
+
+
+
+
+
 struct material
 {
 	color m_ambient_reflectance;
 	color m_diffuse_reflectance;
 	color m_specular_reflectance;
-	double phong_exponent = 1.0;
+	float phong_exponent = 1.0;
 
 	bool has_roughness = false;
 	float roughness = 0.0f;
@@ -47,18 +59,18 @@ struct material
 
 	ray reflected_ray(const ray& r_in, const hitRecord& rec)
 	{
-		vec3 reflected = reflect(unit(r_in.direction()), rec.normal);
+		vec3 reflected = reflect(glm::normalize(r_in.direction()), rec.normal);
 
 		if(has_roughness)
 		{
 
-			auto r = unit(reflected);
+			auto r = glm::normalize(reflected);
 			auto rp = create_non_colinear_vector(r);
-			auto u = unit(cross(r, rp));
-			auto v = unit(cross(r, u));
+			auto u = glm::normalize(cross(r, rp));
+			auto v = glm::normalize(cross(r, u));
 
-			//auto rr = unit(r + u * roughness * roughness_u_offset + v * roughness * roughness_v_offset);
-			auto rr = unit(r + u * roughness * ((frandom() - 0.5f) * 1.0f) + v * roughness * ((frandom() - 0.5f) * 1.0f));
+			//auto rr = glm::normalize(r + u * roughness * roughness_u_offset + v * roughness * roughness_v_offset);
+			auto rr = glm::normalize(r + u * roughness * ((frandom() - 0.5f) * 1.0f) + v * roughness * ((frandom() - 0.5f) * 1.0f));
 			return ray(rec.p, rr);
 		}
 
@@ -76,59 +88,126 @@ struct material
 		color diffuse_reflectance = m_diffuse_reflectance;
 		if (diffuse_map)
 		{
-			auto u = rec.uv.x();
-			auto v = rec.uv.y();
+			auto u = rec.uv.x;
+			auto v = rec.uv.y;
 			diffuse_reflectance = diffuse_map->value(u, v, rec.p);
 			if (blend_diffuse)
 			{
-				diffuse_reflectance = (diffuse_reflectance + m_diffuse_reflectance) * 0.5;
+				diffuse_reflectance = (diffuse_reflectance + m_diffuse_reflectance) * 0.5f;
 			}
 		}
 		color specular_reflectance = m_specular_reflectance;
 		if (specular_map)
 		{
-			auto u = rec.uv.x();
-			auto v = rec.uv.y();
+			auto u = rec.uv.x;
+			auto v = rec.uv.y;
 			specular_reflectance = specular_map->value(u, v, rec.p);
 		}
 		color ambient_reflectance = m_ambient_reflectance;
 		if (ambient_map)
 		{
-			auto u = rec.uv.x();
-			auto v = rec.uv.y();
+			auto u = rec.uv.x;
+			auto v = rec.uv.y;
 			ambient_reflectance = ambient_map->value(u, v, rec.p);
+			return ambient_reflectance;
 		}
 
 		color res;
 		for(auto& light : scene.lights)
 		{
 
-			auto shadow_ray = ray(rec.p + rec.normal * 0.001f, unit(light->get_position() - rec.p - rec.normal * 0.001f));
+			auto shadow_ray = ray(rec.p + rec.normal * 0.001f, glm::normalize(light->get_position() - (rec.p + rec.normal * 0.001f)));
 			if(bump_map)
 			{
-				shadow_ray = ray(rec.nobp+ rec.normal * 0.001f, unit(light->get_position() - rec.nobp - rec.normal * 0.001f));
+				shadow_ray = ray(rec.nobp + rec.normal * 0.001f, glm::normalize(light->get_position() - rec.nobp - rec.normal * 0.01f));
 			}
 			//shadow_ray.orig += rec.normal * 0.001;
 
-			//shadow_ray.dir = unit(shadow_ray.dir);
+			//shadow_ray.dir = glm::normalize(shadow_ray.dir);
 
 			hitRecord srec;
-			if (scene.hit(shadow_ray, 0.001, (light->get_position() - rec.p).length(), srec, nullptr))
+			if (scene.hit(shadow_ray, 0.001, glm::length(light->get_position() - rec.p), srec, nullptr))
 			{
 				continue;
 			}
 
-			auto wi = unit(light->get_position() - rec.p);
+			auto wi = glm::normalize(light->get_position() - rec.p);
 
-			auto cost = std::max(0.0, dot(unit(light->get_position() - rec.p), rec.normal));
-			res += diffuse_reflectance * cost * light->get_intensity(wi) * (1 / (light->get_position() - rec.p).lengthSquared());
+			auto cost = std::max(0.0f, dot(glm::normalize(light->get_position() - rec.p), rec.normal));
+			res += diffuse_reflectance * cost * light->get_intensity(wi) * (1 / glm::dot(light->get_position() - rec.p, light->get_position() - rec.p));
 
-			auto w0 = -unit(r_in.direction());
-			auto h = unit(wi + w0);
-			auto cosa = std::max(0.0, dot(rec.normal, h));
-			res += specular_reflectance * pow(cosa, phong_exponent) * light->get_intensity(wi) * (1 / (light->get_position() - rec.p).lengthSquared());
+			auto w0 = -glm::normalize(r_in.direction());
+			auto h = glm::normalize(wi + w0);
+			auto cosa = std::max(0.0f, dot(rec.normal, h));
+			res += specular_reflectance * pow(cosa, phong_exponent) * light->get_intensity(wi) * (1 / glm::dot(light->get_position() - rec.p, light->get_position() - rec.p));
 		}
+
+		//directional lights
+		for (auto& light : scene.directional_lights)
+		{
+			//shadow ray
+			auto shadow_ray = ray(rec.p + rec.normal * 0.001f, glm::normalize(-light->direction));
+			if (bump_map)
+			{
+				shadow_ray = ray(rec.nobp + rec.normal * 0.001f, glm::normalize(-light->direction));
+			}
+
+			hitRecord srec;
+			if (scene.hit(shadow_ray, 0.001, 1000000, srec, nullptr))
+			{
+				continue;
+			}
+
+			auto wi = -light->direction;
+			auto cost = std::max(0.0f, dot(wi, rec.normal));
+			res += diffuse_reflectance * cost * light->intensity;
+
+			auto w0 = -glm::normalize(r_in.direction());
+			auto h = glm::normalize(wi + w0);
+			auto cosa = std::max(0.0f, dot(rec.normal, h));
+			res += specular_reflectance * pow(cosa, phong_exponent) * light->intensity;
+		}
+
+		//spherical directional lights
+		for (auto& sdl : scene.spherical_directional_lights)
+		{
+			//get a sample from spherical light
+			vec3 dir;
+			vec3 intensity;
+			sdl->sample(rec.normal, intensity, dir);
+
+			//shadow ray
+			auto shadow_ray = ray(rec.p + rec.normal * 0.001f, glm::normalize(dir));
+			if (bump_map)
+			{
+				shadow_ray = ray(rec.nobp + rec.normal * 0.001f, glm::normalize(dir));
+			}
+
+			hitRecord srec;
+			if (scene.hit(shadow_ray, 0.001, 1000000, srec, nullptr))
+			{
+				continue;
+			}
+			auto wi = dir;
+
+			auto w0 = -glm::normalize(r_in.direction());
+			auto cosf = std::max(0.0f, dot(w0, wi));
+
+			//if(cosf > 0.000001f)
+			//	intensity = intensity * (2.0f - cosf);
+
+			auto cost = std::max(0.0f, dot(wi, rec.normal));
+
+			
+			res += diffuse_reflectance * cost * intensity;
+
+			auto h = glm::normalize(wi + w0);
+			auto cosa = std::max(0.0f, dot(rec.normal, h));
+			res += specular_reflectance * pow(cosa, phong_exponent) * intensity;
+		}
+
 		res += ambient_reflectance * scene.ambient_light;
+
 		return res;
 	}
 };

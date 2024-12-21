@@ -10,13 +10,16 @@ struct hitRecord
 	point3 nobp;
 	vec3 normal;
 	std::shared_ptr<material> mat_ptr;
-	double t;
+	float t;
 	bool frontFace;
 	vec2 uv;
 	vec3 tangent;
 	vec3 bitangent;
 	bool negate = false;
 	bool negate_normal = false;
+
+	vec3 dpdu;
+	vec3 dpdv;
 
 	inline void setFaceNormal(const ray &r, const vec3 &outwardNormal)
 	{

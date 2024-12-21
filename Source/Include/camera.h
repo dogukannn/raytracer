@@ -24,14 +24,14 @@ struct camera
 	       float _focusDistance,
 	       float nearDist)
 	{
-		w = unit(lookfrom - lookat);
-		u = unit(cross(vup, w));
-		v = cross(w, u);
+		w = glm::normalize(lookfrom - lookat);
+		u = -glm::normalize(cross(vup, w));
+		v = -cross(w, u);
 
 		origin = lookfrom;
 		horizontal = (near_plane.y - near_plane.x) * u;
 		vertical = (near_plane.w - near_plane.z) * v;
-		lowerLeftCorner = origin - (unit(horizontal) * fabs(near_plane.x)) - (unit(vertical) * fabs(near_plane.z)) - nearDist * w;
+		lowerLeftCorner = origin - (glm::normalize(horizontal) * fabs(near_plane.x)) - (glm::normalize(vertical) * fabs(near_plane.z)) - nearDist * w;
 
 		dof_enabled = _dof_enabled;
 		aperture = _aperture;
@@ -46,7 +46,7 @@ struct camera
 		auto q = lowerLeftCorner + se * horizontal + te * vertical;
 		auto s = origin + (aperture * u * lens_x_offset) + (aperture * v * lens_y_offset);
 
-		auto direction = unit(origin - q);
+		auto direction = glm::normalize(origin - q);
 
 		auto tfd = focusDistance / dot(direction, -w);
 

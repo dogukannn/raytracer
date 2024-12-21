@@ -11,6 +11,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "Include/stb_image.h"
 
+#include "Include/tinyexr.h"
+
 void parser::Scene::loadFromXml(const std::string &filepath)
 {
     tinyxml2::XMLDocument file;
@@ -123,6 +125,34 @@ void parser::Scene::loadFromXml(const std::string &filepath)
 				rotations["r" + std::string(rotation_id)] = Rotation{ angle, axis };
 			}
 		}
+
+		//get composite transformations
+		if (auto composite = element->FirstChildElement("Composite"))
+		{
+			while (composite)
+			{
+				auto composite_id = (composite->Attribute("id"));
+				stream << composite->GetText() << std::endl;
+
+				//get 16 values
+
+				float values[16];
+				for (int i = 0; i < 16; i++)
+				{
+					stream >> values[i];
+				}
+
+				composite = composite->NextSiblingElement("Composite");
+
+				Composite c;
+				for (int i = 0; i < 16; i++)
+				{
+					c.matrix[i] = values[i];
+				}
+
+				composites["c" + std::string(composite_id)] = c;
+			}
+		}
 	    
     }
 
@@ -131,7 +161,47 @@ void parser::Scene::loadFromXml(const std::string &filepath)
     element = element->FirstChildElement("Camera");
     Camera camera;
     while (element)
-    {
+	{
+		camera.enable_tonemap = false;
+		camera.tmo = "";
+		camera.key_value = 0.18f;
+		camera.burn_percent = 0.0f;
+		camera.saturation = 1.0f;
+		camera.gamma = 1.0f;
+
+		if(auto child = element->FirstChildElement("Tonemap"))
+		{
+			auto tmo = child->FirstChildElement("TMO");
+			auto tmo_options = child->FirstChildElement("TMOOptions");
+			auto saturation = child->FirstChildElement("Saturation");
+			auto gamma = child->FirstChildElement("Gamma");
+
+			if (tmo)
+			{
+				stream << tmo->GetText() << std::endl;
+				stream >> camera.tmo;
+			}
+
+			if (tmo_options)
+			{
+				stream << tmo_options->GetText() << std::endl;
+				stream >> camera.key_value >> camera.burn_percent;
+			}
+
+			if (saturation)
+			{
+				stream << saturation->GetText() << std::endl;
+				stream >> camera.saturation;
+			}
+
+			if (gamma)
+			{
+				stream << gamma->GetText() << std::endl;
+				stream >> camera.gamma;
+			}
+			camera.enable_tonemap = true;
+		}
+
         auto is_lookat= (element->Attribute("type", "lookAt") != NULL);
 
         if (is_lookat)
@@ -284,6 +354,101 @@ void parser::Scene::loadFromXml(const std::string &filepath)
 		element = element->NextSiblingElement("Camera");
     }
 
+	//Get Textures
+	element = root->FirstChildElement("Textures");
+	if(element)
+		element = element->FirstChildElement("Images");
+	if(element)
+		element = element->FirstChildElement("Image");
+	Image image;
+    while (element)
+    {
+		auto image_id= (element->Attribute("id"));
+		stream << element->GetText() << std::endl;
+		std::string image_path;
+		stream >> image_path;
+        //load image
+		image_path = directory + image_path;
+
+		//check if the image is png or exr
+
+		//check if the image is png
+		std::string extension = image_path.substr(image_path.find_last_of(".") + 1);
+
+		if (extension == "png")
+		{
+			int width, height, channels;
+			unsigned char* data = stbi_load(image_path.c_str(), &width, &height, &channels, 0);
+			if (!data)
+			{
+				throw std::runtime_error("Error: The image cannot be loaded.");
+			}
+			if (channels != 3 && channels != 4 && channels != 1)
+			{
+				throw std::runtime_error("Error: The image must have 1, 3 or 4 channels.");
+			}
+			if (channels == 3)
+			{
+				image.width = width;
+				image.height = height;
+				image.channels = channels;
+				image.data = new float[width * height * 4];
+				for (int i = 0; i < width * height; i++)
+				{
+					image.data[4 * i] = data[3 * i] / 255.0f;
+					image.data[4 * i + 1] = data[3 * i + 1] / 255.0f;
+					image.data[4 * i + 2] = data[3 * i + 2] / 255.0f;
+				}
+				STBI_FREE(data);
+			}
+			else if (channels == 1)
+			{
+				image.width = width;
+				image.height = height;
+				image.channels = channels;
+				image.data = new float[width * height * 4];
+				for (int i = 0; i < width * height; i++)
+				{
+					image.data[4 * i] = data[i] / 255.0f;
+					image.data[4 * i + 1] = data[i] / 255.0f;
+					image.data[4 * i + 2] = data[i] / 255.0f;
+				}
+				STBI_FREE(data);
+			}
+			else if (channels == 4)
+			{
+				image.width = width;
+				image.height = height;
+				image.channels = 3;
+				image.data = new float[width * height * 4];
+				for (int i = 0; i < width * height * channels; i++)
+				{
+					image.data[i] = data[i] / 255.0f;
+				}
+				STBI_FREE(data);
+			}
+
+		}
+		else if (extension == "exr")
+		{
+			const char* err;
+			int ret = LoadEXR(&image.data, &image.width, &image.height, image_path.c_str(), &err);
+			if (ret != TINYEXR_SUCCESS)
+			{
+				throw std::runtime_error("Error: The image cannot be loaded.");
+			}
+			image.channels = 4;
+		}
+		else
+		{
+			//throw std::runtime_error("Error: The image format is not supported.");
+		}
+
+		images.push_back(image);
+		element = element->NextSiblingElement("Image");
+    }
+
+
     //Get Lights
     element = root->FirstChildElement("Lights");
     auto child = element->FirstChildElement("AmbientLight");
@@ -362,6 +527,81 @@ void parser::Scene::loadFromXml(const std::string &filepath)
         element = element->NextSiblingElement("AreaLight");
     }
 
+	element = root->FirstChildElement("Lights");
+    element = element->FirstChildElement("SpotLight");
+    SpotLight spot_light;
+    while (element)
+    {
+        child = element->FirstChildElement("Position");
+        stream << child->GetText() << std::endl;
+        child = element->FirstChildElement("Direction");
+        stream << child->GetText() << std::endl;
+        child = element->FirstChildElement("CoverageAngle");
+        stream << child->GetText() << std::endl;
+        child = element->FirstChildElement("FalloffAngle");
+        stream << child->GetText() << std::endl;
+        child = element->FirstChildElement("Intensity");
+        stream << child->GetText() << std::endl;
+
+		stream >> spot_light.position.x >> spot_light.position.y >> spot_light.position.z;
+		stream >> spot_light.direction.x >> spot_light.direction.y >> spot_light.direction.z;
+		stream >> spot_light.coverage_angle;
+		stream >> spot_light.falloff_angle;
+		stream >> spot_light.intensity.x >> spot_light.intensity.y >> spot_light.intensity.z;
+       
+		auto transformations = element->FirstChildElement("Transformations");
+		if (transformations)
+		{
+			std::string transformation;
+			stream << transformations->GetText() << std::endl;
+			while (!(stream >> transformation).eof())
+			{
+				area_light.transformations.push_back(transformation);
+				transformation.clear();
+			}
+			stream.clear();
+		}
+
+        spot_lights.push_back(spot_light);
+		spot_light.transformations.clear();
+        element = element->NextSiblingElement("AreaLight");
+    }
+
+	//get directional lights
+	element = root->FirstChildElement("Lights");
+	element = element->FirstChildElement("DirectionalLight");
+	DirectionalLight directional_light;
+	while (element)
+	{
+		child = element->FirstChildElement("Direction");
+		stream << child->GetText() << std::endl;
+		child = element->FirstChildElement("Radiance");
+		stream << child->GetText() << std::endl;
+
+		stream >> directional_light.direction.x >> directional_light.direction.y >> directional_light.direction.z;
+		stream >> directional_light.intensity.x >> directional_light.intensity.y >> directional_light.intensity.z;
+
+		directional_lights.push_back(directional_light);
+		element = element->NextSiblingElement("DirectionalLight");
+	}
+
+	//get spherical directional lights
+	element = root->FirstChildElement("Lights");
+	element = element->FirstChildElement("SphericalDirectionalLight");
+	SphericalDirectionalLight spherical_directional_light;
+	while (element)
+	{
+		child = element->FirstChildElement("ImageId");
+		stream << child->GetText() << std::endl;
+		
+		stream >> spherical_directional_light.image_id;
+
+		spherical_directional_light.type = (element->Attribute("type", "probe") != NULL) ? sphere_light_type::spherical : sphere_light_type::latlong;
+
+		spherical_directional_lights.push_back(spherical_directional_light);
+		element = element->NextSiblingElement("SphericalDirectionalLight");
+	}
+
     //Get Materials
     element = root->FirstChildElement("Materials");
     element = element->FirstChildElement("Material");
@@ -379,6 +619,9 @@ void parser::Scene::loadFromXml(const std::string &filepath)
         child = element->FirstChildElement("SpecularReflectance");
         stream << child->GetText() << std::endl;
         child = element->FirstChildElement("MirrorReflectance");
+
+
+
         bool has_mirror = false;
         if (child)
         {
@@ -439,83 +682,32 @@ void parser::Scene::loadFromXml(const std::string &filepath)
             stream >> material.roughness;
 		}
 
+
+        bool degamma = (element->Attribute("degamma", "true") != NULL);
+		if(degamma)
+		{
+			material.diffuse.x = pow(material.diffuse.x, 2.2f);
+			material.diffuse.y = pow(material.diffuse.y, 2.2f);
+			material.diffuse.z = pow(material.diffuse.z, 2.2f);
+
+			material.ambient.x = pow(material.ambient.x, 2.2f);
+			material.ambient.y = pow(material.ambient.y, 2.2f);
+			material.ambient.z = pow(material.ambient.z, 2.2f);
+
+			material.specular.x = pow(material.specular.x, 2.2f);
+			material.specular.y = pow(material.specular.y, 2.2f);
+			material.specular.z = pow(material.specular.z, 2.2f);
+
+			material.mirror.x = pow(material.mirror.x, 2.2f);
+			material.mirror.y = pow(material.mirror.y, 2.2f);
+			material.mirror.z = pow(material.mirror.z, 2.2f);
+		}
+
         materials.push_back(material);
         element = element->NextSiblingElement("Material");
 		material.has_roughness = false;
     }
 
-	//Get Textures
-	element = root->FirstChildElement("Textures");
-	if(element)
-		element = element->FirstChildElement("Images");
-	if(element)
-		element = element->FirstChildElement("Image");
-	Image image;
-    while (element)
-    {
-		auto image_id= (element->Attribute("id"));
-		stream << element->GetText() << std::endl;
-		std::string image_path;
-		stream >> image_path;
-        //load image
-		image_path = directory + image_path;
-		int width, height, channels;
-		unsigned char* data = stbi_load(image_path.c_str(), &width, &height, &channels, 0);
-		if (!data)
-		{
-			throw std::runtime_error("Error: The image cannot be loaded.");
-		}
-		if (channels != 3 && channels != 4 && channels != 1)
-		{
-			throw std::runtime_error("Error: The image must have 1, 3 or 4 channels.");
-		}
-		if (channels == 3)
-		{
-			image.width = width;
-			image.height = height;
-			image.channels = channels;
-			image.data = new float[width * height * channels];
-			for (int i = 0; i < width * height * channels; i++)
-			{
-				image.data[i] = data[i] / 255.0f;
-			}
-			STBI_FREE(data);
-		}
-		else if (channels == 1)
-		{
-			image.width = width;
-			image.height = height;
-			image.channels = channels;
-			image.data = new float[width * height * 3];
-			for (int i = 0; i < width * height; i++)
-			{
-				image.data[3 * i] = data[i] / 255.0f;
-				image.data[3 * i + 1] = data[i] / 255.0f;
-				image.data[3 * i + 2] = data[i] / 255.0f;
-			}
-			STBI_FREE(data);
-		}
-		else if (channels == 4)
-		{
-			image.width = width;
-			image.height = height;
-			image.channels = 3;
-			image.data = new float[width * height * 3];
-			int k = 0;
-			for (int i = 0; i < width * height * channels; i++)
-			{
-				if(i % 4 == 3)
-				{
-					continue;
-				}
-				image.data[k] = data[i] / 255.0f;
-				k++;
-			}
-			STBI_FREE(data);
-		}
-		images.push_back(image);
-		element = element->NextSiblingElement("Image");
-    }
 
 	element = root->FirstChildElement("Textures");
 	if(element)
@@ -582,7 +774,7 @@ void parser::Scene::loadFromXml(const std::string &filepath)
 			}
 		}
 
-		if (strcmp(type, "perlin") == 0)
+		if (strcmp(type, "perlin") == 0 || strcmp(type, "checkerboard") == 0 )
 		{
 			texture.is_perlin = true;
 
@@ -717,7 +909,7 @@ void parser::Scene::loadFromXml(const std::string &filepath)
 
 			for (auto& uv : vTex)
 			{
-				vertex_uv_data.push_back(Vec2f{ (float)uv[0], (float)uv[1]});
+				vertex_uv_data.push_back(Vec2f{ fabs((float)uv[0]), fabs((float)uv[1])});
 			}
 			for (auto& v : vPos)
 			{

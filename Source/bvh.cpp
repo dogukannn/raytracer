@@ -7,14 +7,14 @@
 bool hitAABB(const ray& r, const vec3& bmin, const vec3& bmax)
 {
 	// Slab method
-	double tmin = (bmin.x() - r.orig.x()) / r.dir.x();
-	double tmax = (bmax.x() - r.orig.x()) / r.dir.x();
+	double tmin = (bmin.x - r.orig.x) / r.dir.x;
+	double tmax = (bmax.x - r.orig.x) / r.dir.x;
 
 	if (tmin > tmax)
 		std::swap(tmin, tmax);
 
-	double tymin = (bmin.y() - r.orig.y()) / r.dir.y();
-	double tymax = (bmax.y() - r.orig.y()) / r.dir.y();
+	double tymin = (bmin.y - r.orig.y) / r.dir.y;
+	double tymax = (bmax.y - r.orig.y) / r.dir.y;
 
 	if (tymin > tymax)
 		std::swap(tymin, tymax);
@@ -28,8 +28,8 @@ bool hitAABB(const ray& r, const vec3& bmin, const vec3& bmax)
 	if (tymax < tmax)
 		tmax = tymax;
 
-	double tzmin = (bmin.z() - r.orig.z()) / r.dir.z();
-	double tzmax = (bmax.z() - r.orig.z()) / r.dir.z();
+	double tzmin = (bmin.z - r.orig.z) / r.dir.z;
+	double tzmax = (bmax.z - r.orig.z) / r.dir.z;
 
 	if (tzmin > tzmax)
 		std::swap(tzmin, tzmax);
@@ -118,14 +118,14 @@ void TLBVH::UpdateNodeBounds(uint32_t nodeIdx)
 		const BVHInstance& bvh_instance = *bvh_instances[bvh_instance_indices[i]];
 		BVHNode& bvh_root = bvh_instance.bvh->nodes[bvh_instance.bvh->rootNodeIdx];
 		//transform the aabb according to the model matrix
-		vec3 aabb_min = vec3(bvh_root.aabb_min.x(), bvh_root.aabb_min.y(), bvh_root.aabb_min.z());
-		vec3 aabb_max = vec3(bvh_root.aabb_max.x(), bvh_root.aabb_max.y(), bvh_root.aabb_max.z());
+		vec3 aabb_min = vec3(bvh_root.aabb_min.x, bvh_root.aabb_min.y, bvh_root.aabb_min.z);
+		vec3 aabb_max = vec3(bvh_root.aabb_max.x, bvh_root.aabb_max.y, bvh_root.aabb_max.z);
 
 		vec4 min = bvh_instance.model * vec4(aabb_min, 1.0f);
 		vec4 max = bvh_instance.model * vec4(aabb_max, 1.0f);
 
-		aabb_min = vec3(min.x(), min.y(), min.z());
-		aabb_max = vec3(max.x(), max.y(), max.z());
+		aabb_min = vec3(min.x, min.y, min.z);
+		aabb_max = vec3(max.x, max.y, max.z);
 
 		node.aabb_min = fmin(node.aabb_min, aabb_min);
 		node.aabb_max = fmax(node.aabb_max, aabb_max);
@@ -141,9 +141,9 @@ void TLBVH::Subdivide(uint32_t nodeIdx)
 
 	vec3 extents = node.aabb_max - node.aabb_min;
 	int axis = 0;
-	if (extents.y() > extents.x())
+	if (extents.y > extents.x)
 		axis = 1;
-	if (extents.z() > extents[axis])
+	if (extents.z > extents[axis])
 		axis = 2;
 
 	float split = 0.5f * (node.aabb_min[axis] + node.aabb_max[axis]);
@@ -280,7 +280,7 @@ bool TLBVH::hit(const ray& r, double tMin, double tMax, hitRecord& rec, mat4* mo
 				{
 					BVHInstance& bvh_instance = *bvh_instances[bvh_instance_indices[i]];
 					//convert ray accoring to the model matrix
-					auto invModel = bvh_instance.model.inverse();
+					auto invModel = glm::inverse(bvh_instance.model);
 					ray newRay = r;
 					vec4 origin = vec4(newRay.origin(), 1.0f);
 					vec4 direction = vec4(newRay.direction(), 0.0f);
@@ -288,7 +288,7 @@ bool TLBVH::hit(const ray& r, double tMin, double tMax, hitRecord& rec, mat4* mo
 					vec4 newOrigin = invModel * origin;
 					vec4 newDirection = invModel * direction;
 
-					newRay = ray(vec3(newOrigin.x(), newOrigin.y(), newOrigin.z()), vec3(newDirection.x(), newDirection.y(), newDirection.z()));
+					newRay = ray(vec3(newOrigin.x, newOrigin.y, newOrigin.z), vec3(newDirection.x, newDirection.y, newDirection.z));
 
 					if (bvh_instance.hit(newRay, tMin, tMax, rec, &bvh_instance.model))
 					{
@@ -360,9 +360,9 @@ void BVH::Subdivide(uint32_t nodeIdx)
 
 	vec3 extents = node.aabb_max - node.aabb_min;
 	int axis = 0;
-	if (extents.y() > extents.x())
+	if (extents.y > extents.x)
 		axis = 1;
-	if (extents.z() > extents[axis])
+	if (extents.z > extents[axis])
 		axis = 2;
 
 	float split = 0.5f * (node.aabb_min[axis] + node.aabb_max[axis]);
