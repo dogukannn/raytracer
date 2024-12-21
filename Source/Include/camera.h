@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.h"
+#include "parser.h"
 
 struct camera
 {
@@ -9,38 +10,53 @@ struct camera
 	vec3 horizontal;
 	vec3 vertical;
 	vec3 u, v, w;
-	double lensRadius;
+
+	bool dof_enabled = false;
+	float focusDistance;
+	float aperture;
 
 	camera(point3 lookfrom,
 	       point3 lookat,
 	       vec3 vup,
-	       double vfov, 
-	       double aspectRatio,
-	       double aperture,
-	       double focusDist)
+	       parser::Vec4f near_plane, 
+		   bool _dof_enabled,
+	       float _aperture,
+	       float _focusDistance,
+	       float nearDist)
 	{
-		auto theta = degreesToRadians(vfov);
-		auto h = tan(theta / 2);
-		double viewportHeight = 2.0 * h;
-		double viewportWidth = aspectRatio * viewportHeight;
-
-		w = unit(lookfrom - lookat);
-		u = unit(cross(vup, w));
+		//todo make lefthandedness work
+		w = glm::normalize(lookfrom - lookat);
+		u = glm::normalize(cross(vup, w));
 		v = cross(w, u);
 
 		origin = lookfrom;
-		horizontal = focusDist * viewportWidth * u;
-		vertical = focusDist *  viewportHeight * v;
-		lowerLeftCorner = origin - (horizontal / 2.0) - (vertical / 2.0) - focusDist * w;
+		horizontal = (near_plane.y - near_plane.x) * u;
+		vertical = (near_plane.w - near_plane.z) * v;
+		lowerLeftCorner = origin - (glm::normalize(horizontal) * fabs(near_plane.x)) - (glm::normalize(vertical) * fabs(near_plane.z)) - nearDist * w;
 
-		lensRadius = aperture / 2;
+		dof_enabled = _dof_enabled;
+		aperture = _aperture;
+		focusDistance = _focusDistance;
 	}
 
-	ray getRay(double s, double t) const
+	ray getRay(float se, float te) const
 	{
-		vec3 rd = lensRadius * randomInUnitSphere();
-		vec3 offset = u * rd.x() + v * rd.y();
+		if(!dof_enabled)
+			return ray(origin,  lowerLeftCorner + se * horizontal + te * vertical - origin);
 
-		return ray(origin + offset,  lowerLeftCorner + s * horizontal + t * vertical - origin - offset);
+		auto q = lowerLeftCorner + se * horizontal + te * vertical;
+		auto s = origin + (aperture * u * lens_x_offset) + (aperture * v * lens_y_offset);
+
+		auto direction = glm::normalize(origin - q);
+
+		auto tfd = focusDistance / dot(direction, -w);
+
+		ray r(origin, direction);
+
+		auto p = r.at(tfd);
+
+		auto d = p - s;
+
+		return ray(s, d);
 	}
 };

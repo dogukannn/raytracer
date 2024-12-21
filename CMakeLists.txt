@@ -9,8 +9,13 @@ set(EXTERNAL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/External)
 
 set(CMAKE_CXX_STANDARD 17)
 
+#add_subdirectory(${EXTERNAL_DIR}/glm)
+
+include_directories(${EXTERNAL_DIR})
+
 file(GLOB_RECURSE SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/*.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/Include/*.h
 )
 

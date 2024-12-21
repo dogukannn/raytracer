@@ -3,170 +3,49 @@
 #include <cmath>
 #include <iostream>
 
+#include "common.h"
 
-struct vec3
-{
-	double e[3];
-
-	vec3() : e{0,0,0} {} 
-	vec3(double e0, double e1, double e2) : e{e0, e1, e2} {}
-
-	double x() const { return e[0]; }
-	double y() const { return e[1]; }
-	double z() const { return e[2]; }
-
-	vec3 operator-() const { return vec3(-e[0], -e[1], -e[2]); }
-	double operator[](int i) const { return e[i]; }
-	double& operator[](int i) { return e[i]; }
-
-	vec3& operator+=(const vec3& v)
-	{
-		e[0] += v.e[0];
-		e[1] += v.e[1];
-		e[2] += v.e[2];
-		return *this;
-	}
-
-	vec3& operator*=(const double t)
-	{
-		e[0] *= t;
-		e[1] *= t;
-		e[2] *= t;
-		return *this;
-	}
-
-	vec3& operator/=(const double t)
-	{
-		return *this *= 1 / t;
-	}
-
-	double length() const
-	{
-		return std::sqrt(lengthSquared());
-	}
-
-	double lengthSquared() const
-	{
-		return e[0]*e[0] + e[1]*e[1] + e[2]*e[2];
-	}
-
-	inline static vec3 random()
-	{
-		return vec3(randomDouble(), randomDouble(), randomDouble());
-	}
-
-	inline static vec3 random(double min, double max)
-	{
-		return vec3(randomDouble(min, max), randomDouble(min, max), randomDouble(min, max));
-	}
-
-	bool nearZero() const
-	{
-		const auto s = 1e-8;
-		return (fabs(e[0]) < s) && (fabs(e[1]) < s) && (fabs(e[2]) < s);
-	}
-};
-
-using point3 = vec3;
-using color = vec3;
-
-inline std::ostream& operator<<(std::ostream &out, const vec3 &v)
-{
-	return out << v.e[0] << " " << v.e[1] << " " << v.e[2];
-}
-
-inline vec3 operator+(const vec3 &u, const vec3 &v)
-{
-	return vec3(u.e[0] + v.e[0], u.e[1] + v.e[1], u.e[2] + v.e[2]);
-}
+using vec4 = glm::vec4;
+using vec3 = glm::vec3;
+using point3 = glm::vec3;
+using color = glm::vec3;
+using mat4 = glm::mat4;
+using mat3 = glm::mat3;
+using vec2 = glm::vec2;
 
 
-inline vec3 operator-(const vec3 &u, const vec3 &v)
-{
-	return vec3(u.e[0] - v.e[0], u.e[1] - v.e[1], u.e[2] - v.e[2]);
-}
-
-
-inline vec3 operator*(const vec3 &u, const vec3 &v)
-{
-	return vec3(u.e[0] * v.e[0], u.e[1] * v.e[1], u.e[2] * v.e[2]);
-}
-
-inline vec3 operator*(double t, const vec3 &v)
-{
-	return vec3(t * v.e[0], t * v.e[1], t * v.e[2]);
-}
-
-inline vec3 operator*(const vec3 &v, double t)
-{
-	return t * v;
-}
-
-inline vec3 operator/(const vec3 &v, double t)
-{
-	return ( 1 / t ) * v;
-}
-
-inline double dot(const vec3 &u, const vec3 &v)
-{
-	return u.e[0] * v.e[0] +
-		   u.e[1] * v.e[1] +
-		   u.e[2] * v.e[2];
-}
-
-inline vec3 cross(const vec3 &u, const vec3 &v)
-{
-    return vec3(u.e[1] * v.e[2] - u.e[2] * v.e[1],
-                u.e[2] * v.e[0] - u.e[0] * v.e[2],
-                u.e[0] * v.e[1] - u.e[1] * v.e[0]);
-}
-
-inline vec3 unit(vec3 v)
-{
-	return v / v.length();
-}
-
-vec3 randomInUnitSphere()
-{
-	while (true)
-	{
-		auto p = vec3::random(-1, 1);
-		if (p.length() >= 1) continue;
-		return p;
-	}
-}
-
-vec3 randomUnitVector()
-{
-	return unit(randomInUnitSphere());
-}
-
-vec3 randomInUnitDisk()
-{
-	while (true)
-	{
-		auto p = vec3(randomDouble(-1, 1), randomDouble(-1, 1), 0);
-		if(p.lengthSquared() >= 1) continue;
-		return p;
-	}
-}
-
-vec3 reflect(const vec3 &v, const vec3 &n)
+inline glm::vec3 reflect(const glm::vec3 &v, const glm::vec3 &n)
 {
 	return v - 2 * dot(v, n) * n;
 }
 
-vec3 refract(const vec3 &uv, const vec3 &n, double etaiOverEtat)
+inline glm::vec3 refract(const glm::vec3 &uv, const glm::vec3 &n, float etaiOverEtat)
 {
-	auto cosTheta = fmin(dot(-uv, n), 1.0);
-	vec3 rOutPerp = etaiOverEtat * (uv + cosTheta * n);
-	vec3 rOutParallel = -sqrt(fabs(1.0 - rOutPerp.lengthSquared())) * n;
+	float cosTheta = fmin(dot(-uv, n), 1.0);
+	glm::vec3 rOutPerp = etaiOverEtat * (uv + cosTheta * n);
+	glm::vec3 rOutParallel = -sqrt(fabs(1.0f - glm::dot(rOutPerp, rOutPerp)) * n);
 	return rOutPerp + rOutParallel;
 }
 
+inline glm::vec3 fmin(glm::vec3 a, glm::vec3 b)
+{
+	return glm::vec3(fmin(a[0], b[0]), fmin(a[1], b[1]), fmin(a[2], b[2]));
+}
 
+inline glm::vec3 fmax(glm::vec3 a, glm::vec3 b)
+{
+	return glm::vec3(fmax(a[0], b[0]), fmax(a[1], b[1]), fmax(a[2], b[2]));
+}
 
+inline float half_average(glm::vec3 a)
+{
+	return (a.x + a.y + a.z) / 6.0f;
+}
 
+inline float luminance(glm::vec3 a)
+{
+	return 0.2126f * a.x + 0.7152f * a.y + 0.0722f * a.z;
+}
 
 
 
